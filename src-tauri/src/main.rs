@@ -7,11 +7,12 @@ use regex::Regex;
 use ripgrepa_gui::myutils::*;
 use std::env::consts::OS;
 use std::io::{self, BufRead};
+use std::os;
 //use std::os::linux::raw::stat;
 use std::path::Path;
 use std::process::Command;
 use std::process::Stdio;
-//use tauri::api::file;
+use tauri::api::file;
 // use tauri::api::dialog;
 //use that_open;
 
@@ -265,6 +266,23 @@ fn get_home_dir() -> String {
 }
 
 fn main() {
+    if OS == "windows" {
+        // 检查并安装 Scoop
+        if !is_scoop_installed() {
+            if let Err(e) = install_scoop() {
+                eprintln!("Error installing Scoop: {}", e);
+                return;
+            }
+        }
+
+        // 检查并安装 rga
+        if !is_rga_installed() {
+            if let Err(e) = install_rga() {
+                eprintln!("Error installing rga: {}", e);
+                return;
+            }
+        }
+    }
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             run_rg_command,

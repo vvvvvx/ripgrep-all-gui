@@ -1,5 +1,6 @@
-use tauri::utils::pattern;
-
+//use std::path::Path;
+use std::process::Command;
+//use tauri::utils::pattern;
 pub fn generate_filename_pattern(filename_pattern: &str) -> String {
     if filename_pattern.is_empty() {
         return String::new();
@@ -33,4 +34,43 @@ pub fn generate_patterns(patterns: &str) -> String {
             + "' ";
     }
     // -e '数据治理.*财务|财务.*数据治理'
+}
+pub fn is_scoop_installed() -> bool {
+    Command::new("powershell")
+        .arg("-Command")
+        .arg("scoop")
+        .output()
+        .is_ok()
+}
+
+pub fn install_scoop() -> Result<(), String> {
+    let output = Command::new("powershell")
+        .arg("-Command")
+        .arg("Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://get.scoop.sh')")
+        .output()
+        .map_err(|e| format!("Failed to install Scoop: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+pub fn is_rga_installed() -> bool {
+    Command::new("rga").arg("--version").output().is_ok()
+}
+
+pub fn install_rga() -> Result<(), String> {
+    let output = Command::new("powershell")
+        .arg("-Command")
+        .arg("scoop install rga")
+        .output()
+        .map_err(|e| format!("Failed to install rga: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
 }
