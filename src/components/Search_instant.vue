@@ -5,7 +5,7 @@
         <div class="row">
             <div class="col-12 ">
                 <div class="input-group mb-0 mt-0 ">
-                    <span class="input-group-text dark-mode ht-45">搜索路径</span>
+                    <span class="input-group-text dark-mode ht-45">&emsp;搜索路径</span>
                     <input class="form-control dark-mode ht-45" v-model="searchPath" placeholder="Enter search path"
                         title="全盘搜索时间也不会太久，&#10;但缩小搜索范围，会大大缩短搜索时间。" />
                     <button class="btn btn-primary  pt-1 ht-45" @click="openFolderDialog" title="点击选择搜索根路径">...</button>
@@ -13,9 +13,10 @@
             </div>
             <div class="col-4 ">
                 <div class="input-group mb-0 mt-0 ">
-                    <span class="input-group-text dark-mode mt-1 ht-45">文件类型</span>
-                    <input class="form-control dark-mode mt-1 ht-45" v-model="fileType" placeholder="空格分隔，如：docx zip"
-                        title="默认为空，搜索所有文件类型。&#10;指定文件类型可大大缩短搜索时间。" />
+                    <span class="input-group-text dark-mode mt-1 ht-45">文件名特征</span>
+                    <input class="form-control dark-mode mt-1 ht-45" v-model="filenamePattern"
+                        placeholder="空格分隔，如：*研究报告*.docx  *.zip  *.pdf"
+                        title="用空格分隔多个特征，默认为空，搜索所有文件。&#10;&#10;例如：&#10;*.docx *.pdf  表示搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*.*  表示搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示排除扩展名为 txt 的文件。&#10;!*研究报告*.* 表示排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示排除文件名包含“研究报告”的 pdf 文件。" />
                 </div>
             </div>
             <div class="col-8 ">
@@ -29,7 +30,7 @@
                         </div>
                     </div>
                     <input class="form-control dark-mode  mt-1 ht-45" v-model="searchPattern"
-                        placeholder="Enter search pattern"
+                        placeholder="搜索模式，支持正则表达式"
                         title="支持正则表达式，如：.*\.(txt|md) 。&#10;支持空格分隔两个关键字，表示同时满足这两个关键字" />
                     <button class="btn btn-primary mt-1 pt-1 ht-45" @click="runCommand"
                         title="为缩短搜索时间，程序会多线程并发搜索。&#10;因此，CPU占用率很高是正常现象！">搜索</button>
@@ -42,11 +43,11 @@
                 <label class="form-check-label mt-0 pt-0 ht-45" for="search-file-name">只搜文件名</label>
                 <input type="checkbox" class="form-check-input mt-2" id="search-file-name" v-model="searchFilename" />
             </div>
-            <div class="form-check mt-0" style="width: 260px;display: inline-flex;"
+            <div class="form-check mt-0" style="width: 300px;display: inline-flex;"
                 title="单个文件最大匹配次数, 0 表示无限制。过大可能会导致搜索时间过长。">
                 <label class="form-check-label mt-0 pt-0 ht-45" for="max-count" style="width: 180px;">最大匹配次数:</label>
                 <input class="form-control dark-mode mt-1 ht-30" id="max-count" v-model="maxCount"
-                    style="width: 70px;" />
+                    style="width: 80px;" />
             </div>
 
             <div style="display: inline-flex;position: absolute;bottom: 0;gap: 0.5rem;">
@@ -66,10 +67,10 @@
                 <tr>
                     <th class="text-start fs-6 " style="width: 20px;">目录</th>
                     <th class="text-end fs-6 " style="width: 20px;" title="点击按命中次数排序">
-                        <a href="#" @click.prevent="sortOutputByHitCount" id="sort-by-hit-count"> 命中< </a>
+                        <a href="#" @click.prevent="sortOutputByHitCount" id="sort-by-hit-count"> 命中- </a>
                     </th>
                     <th class="text-start fs-6 " title="点击按文件名排序">
-                        <a href="#" @click.prevent="sortOutputByFile" id="sort-by-file">文件< </a>
+                        <a href="#" @click.prevent="sortOutputByFile" id="sort-by-file">&emsp;文件- </a>
                     </th>
 
                 </tr>
@@ -127,7 +128,7 @@ export default {
         const searchPattern = ref(''); // 搜索模式
         const output = ref([]); // 搜索结果数组
         const searchPath = ref(''); // 搜索路径
-        const fileType = ref(''); // 搜索文件类型，空格分割
+        const filenamePattern = ref(''); // 搜索文件类型，空格分割
         const regexMode = ref(false);// 是否启用正则表达式模式
         const dispHitCount = ref(false); // 是否显示命中次数
         const preFile = ref('');// 记录上一个搜到的文件名，用于去重
@@ -139,7 +140,7 @@ export default {
             let hc = getById("sort-by-hit-count");
             let sf = getById("sort-by-file");
 
-            if (hc.innerText === "命中<") {
+            if (hc.innerText === "命中-") {
                 //↑↓
                 //descending
                 hc.innerText = "命中↓";
@@ -153,14 +154,14 @@ export default {
                 hc.innerText = "命中↓";
                 output.value.sort((a, b) => b.hitCount - a.hitCount);
             }
-            sf.innerText = "文件<";
+            sf.innerText = "文件-";
             scrollToTop();
         };
         const sortOutputByFile = () => {
             let sf = getById("sort-by-file");
             let hc = getById("sort-by-hit-count");
 
-            if (sf.innerText === "文件<") {
+            if (sf.innerText === "文件-") {
                 //ascending
                 sf.innerText = "文件↑";
                 output.value.sort((a, b) => a.file.localeCompare(b.file));
@@ -174,18 +175,23 @@ export default {
                 output.value.sort((a, b) => a.file.localeCompare(b.file));
             }
 
-            hc.innerText = "命中<";
+            hc.innerText = "命中-";
             scrollToTop();
         };
         const runCommand = () => {
 
-            if (searchPattern.value === '') {    //if search pattern is empty, show error message and return
+            if (searchPattern.value === '' && !searchFilename.value) {    //if search pattern is empty, show error message and return
                 alert('搜索模式不能为空');
                 return;
             }
 
             if (searchPath.value === '') {    //if search path is empty, show error message and return  
                 alert('搜索路径不能为空');
+                return;
+            }
+
+            if (searchFilename.value && filenamePattern.value.trim() === '' && searchPattern.value.trim() === '') {
+                alert('搜索文件名时，搜索模式和文件名特征不能同时为空');
                 return;
             }
             let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
@@ -201,11 +207,11 @@ export default {
             }
             output.value = [];//clear output before running new command
             // reset
-            getById("sort-by-file").innerText = "文件<";
-            getById("sort-by-hit-count").innerText = "命中<";
+            getById("sort-by-file").innerText = "文件-";
+            getById("sort-by-hit-count").innerText = "命中-";
             preFile.value = "";//reset preFile before running new command
             cmdStatus.value = "搜索中...";
-            invoke('run_rg_command', { searchPattern: searchPattern.value.trim(), searchPath: searchPath.value, fileType: fileType.value, regexMode: regexMode.value, dispHitCount: dispHitCount.value, searchFilename: searchFilename.value, maxCount: Number(maxCount.value) });
+            invoke('run_rg_command', { searchPattern: searchPattern.value.trim(), searchPath: searchPath.value, filenamePattern: filenamePattern.value, regexMode: regexMode.value, dispHitCount: dispHitCount.value, searchFilename: searchFilename.value, maxCount: Number(maxCount.value) });
         };
         const openFolderDialog = async () => {
             try {
@@ -242,14 +248,20 @@ export default {
                 // 使用slice方法分割字符串
                 let firstPart = event.payload.slice(0, firstIndex);
                 let secondPart = event.payload.slice(firstIndex + 1);
+                if (secondPart.length > 1000) {
+                    secondPart = secondPart.slice(0, 1000) + '...';
+                }
                 // 非显示命中次数模式，文件名去重。把命中字符串content和前次命中字符串合并
 
                 if (firstPart === preFile.value) {
                     // 去重
                     output.value[output.value.length - 1].hitCount += 1;
                     // 命中次数大于20时，显示前20个命中内容,其他忽略
-                    if (output.value[output.value.length - 1].hitCount <= 20) {
+                    if (output.value[output.value.length - 1].hitCount < 20) {
                         output.value[output.value.length - 1].content += "\n" + secondPart;
+                    }
+                    if (output.value[output.value.length - 1].hitCount === 20) {
+                        output.value[output.value.length - 1].content += "\n...";
                     }
                     return;
                 }
@@ -274,7 +286,7 @@ export default {
             runCommand,
             openFolderDialog,
             getHomeDir,
-            fileType,
+            filenamePattern,
             output,
             dispHitCount,
             sortOutputByFile,
@@ -339,6 +351,7 @@ html {
     width: 28px;
     height: 28px;
     vertical-align: middle;
+
 }
 
 .ht-45 {

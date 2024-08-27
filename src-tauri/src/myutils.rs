@@ -1,12 +1,16 @@
-pub fn generate_filetypes(filetypes: &str) -> String {
-    if filetypes.is_empty() {
+use tauri::utils::pattern;
+
+pub fn generate_filename_pattern(filename_pattern: &str) -> String {
+    if filename_pattern.is_empty() {
         return String::new();
     }
-    let mut types = String::new();
-    for filetype in filetypes.split_whitespace() {
-        types = types + " -g '*." + filetype + "'";
+    let mut ptrn = String::new();
+    // 处理误输入的中文叹号
+    let patternes = filename_pattern.replace("！", "!");
+    for pattern in patternes.split_whitespace() {
+        ptrn = ptrn + " -g '" + pattern + "' ";
     }
-    types
+    ptrn
 }
 
 pub fn generate_patterns(patterns: &str) -> String {
@@ -26,7 +30,7 @@ pub fn generate_patterns(patterns: &str) -> String {
             + ptrns[1]
             + ".*"
             + ptrns[0]
-            + "'";
+            + "' ";
     }
     // -e '数据治理.*财务|财务.*数据治理'
 }

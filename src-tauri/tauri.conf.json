@@ -24,7 +24,8 @@
       {
         "title": "极速全文搜索",
         "width": 1920,
-        "height": 1060
+        "height": 1060,
+        "resizable": true
       }
     ],
     "security": {

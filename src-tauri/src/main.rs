@@ -1,16 +1,17 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use dirs::home_dir;
+//use dirs::home_dir;
 use open::that;
 use regex::Regex;
 use ripgrepa_gui::myutils::*;
+use std::env::consts::OS;
 use std::io::{self, BufRead};
-use std::os::linux::raw::stat;
+//use std::os::linux::raw::stat;
 use std::path::Path;
 use std::process::Command;
 use std::process::Stdio;
-use tauri::api::file;
+//use tauri::api::file;
 // use tauri::api::dialog;
 //use that_open;
 
@@ -86,16 +87,17 @@ fn run_rg_command(
     window: tauri::Window,
     searchPattern: &str,
     searchPath: &str,
-    fileType: &str,
+    filenamePattern: &str,
     regexMode: bool,
     dispHitCount: bool,
     searchFilename: bool,
     maxCount: u32,
 ) {
     let mut ptrn_str = String::new();
-    let filetype_str = generate_filetypes(fileType);
+    let file_patrn_str = generate_filename_pattern(filenamePattern);
     let mut disp_hitcount_str = " ";
     let mut max_count_str = " ".to_string();
+    let mut re = Regex::new(".*").unwrap();
 
     if regexMode {
         ptrn_str = " -e '".to_string() + searchPattern + "' ";
@@ -111,32 +113,48 @@ fn run_rg_command(
     }
     let mut rga_str = "rga ".to_string()
         + max_count_str.as_str()
-        + " "
         + disp_hitcount_str
-        + " "
-        + filetype_str.as_str()
-        + " "
+        + file_patrn_str.as_str()
         + ptrn_str.as_str()
-        + " "
-        + searchPath
-        + " 2>/dev/null";
+        + searchPath;
+    // + " 2>/dev/null";
+    if OS == "windows" {
+        rga_str += " 2>nul";
+    } else {
+        rga_str += " 2>/dev/null";
+    }
 
     if searchFilename {
-        rga_str = "rga --files ".to_string() + searchPath;
+        rga_str = "rga ".to_string() + file_patrn_str.as_str() + " --files " + searchPath;
     }
 
     println!("Running command:{}", rga_str);
-    let re = match Regex::new(searchPattern) {
-        Ok(re) => re,
-        Err(e) => {
-            println!("Error compiling regex: {}", e);
-            return;
-        }
-    };
+    // re用于文件名搜索的模式匹配
+    if searchFilename && searchPattern.trim().len() > 0 {
+        re = match Regex::new(searchPattern) {
+            Ok(r) => r,
+            Err(e) => {
+                println!("Error compiling regex: {}", e);
+                window
+                    .emit(
+                        "completed",
+                        Some("执行结束：正则表达式解析错误!".to_string()),
+                    )
+                    .unwrap();
+                return;
+            }
+        };
+    }
     println!("regex:{}", re);
+
+    let shell = if OS == "windows" {
+        ("cmd", ["/C"])
+    } else {
+        ("sh", ["-c"])
+    };
     std::thread::spawn(move || {
-        let args = ["-c", &rga_str];
-        let mut child = Command::new("sh")
+        let args = [shell.1[0], &rga_str];
+        let mut child = Command::new(shell.0)
             .args(args)
             .stdout(Stdio::piped())
             .spawn()
@@ -146,15 +164,20 @@ fn run_rg_command(
             for line in reader.lines() {
                 match line {
                     Ok(line) => {
-                        // println!("line:{}", line);
+                        //println!("line:{}", line);
                         if searchFilename {
-                            let dir_path = Path::new(line.as_str());
-                            let filename = dir_path.file_name().unwrap().to_str().unwrap();
+                            //let dir_path = Path::new(line.as_str());
+                            //let filename = dir_path.file_name().unwrap().to_str().unwrap();
                             //    println!("filename:{}", filename);
-                            if re.is_match(filename) {
-                                window.emit("rg-output", line).unwrap();
+                            if let Some(filename) = Path::new(&line)
+                                .file_name()
+                                .and_then(|os_str| os_str.to_str())
+                            {
+                                if re.is_match(filename) {
+                                    window.emit("rg-output", line).unwrap();
+                                }
+                                continue;
                             }
-                            continue;
                         }
                         window.emit("rg-output", line).unwrap();
                     }
@@ -162,6 +185,7 @@ fn run_rg_command(
                 }
             }
         }
+
         /*
         if let Some(stdout) = child.stdout.take() {
             let reader = io::BufReader::new(stdout);
@@ -187,7 +211,7 @@ fn run_rg_command(
             }
         }
 
-        */
+         */
         let status = child.wait().expect("Command wasn't running");
         // 发送结束信息
         println!("Command finished with status: {}", status.code().unwrap());
