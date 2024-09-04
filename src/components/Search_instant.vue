@@ -731,7 +731,6 @@ html {
     display: flex;
     flex-direction: column;
 }
-
 .icon {
     width: 28px;
     height: 28px;
@@ -807,7 +806,6 @@ a:hover {
     border-bottom: 1px solid #ddd;
 }
 */
-
 
 .light-mode {
     background-color: white;

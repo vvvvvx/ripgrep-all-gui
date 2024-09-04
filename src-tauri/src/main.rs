@@ -192,7 +192,6 @@ fn run_rg_command(
             for line in reader.lines() {
                 match line {
                     Ok(line) => {
-                        // println!("line:{}", line);
                         if searchFilename {
                             //let dir_path = Path::new(line.as_str());
                             //let filename = dir_path.file_name().unwrap().to_str().unwrap();
@@ -310,6 +309,7 @@ fn main() {
     //         }
     //     }
     // }
+
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             run_rg_command,
