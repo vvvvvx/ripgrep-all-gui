@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 target/*
+image_files/*
 
 # Editor directories and files
 .vscode/*

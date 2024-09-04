@@ -87,16 +87,17 @@ fn open_folder_dialog() -> String {
 #[tauri::command]
 fn run_rg_command(
     window: tauri::Window,
-    searchPattern: &str,   // 全文搜索模式
-    searchPath: &str,      // 搜索路径
-    filenamePattern: &str, // 文件名模式特征
-    regexMode: bool,       // 是否使用正则模式
-    dispHitCount: bool,    // 是否显示匹配行数
-    searchFilename: bool,  // 是否仅搜索文件名
-    maxCount: u32,         // 最大匹配行数
-    searchHidden: bool,    // 是否搜索隐藏文件
-    maxDepth: u32,         // 最大搜索深度
-    searchBinary: bool,    // 是否搜索二进制文件
+    searchPattern: &str,    // 全文搜索模式
+    searchPath: &str,       // 搜索路径
+    filenamePattern: &str,  // 文件名模式特征
+    regexMode: bool,        // 是否使用正则模式
+    dispHitCount: bool,     // 是否显示匹配行数
+    searchFilename: bool,   // 是否仅搜索文件名
+    maxCount: u32,          // 最大匹配行数
+    searchHidden: bool,     // 是否搜索隐藏文件
+    maxDepth: u32,          // 最大搜索深度
+    searchBinary: bool,     // 是否搜索二进制文件
+    excludeNotCommon: bool, // 是否排除常见压缩文件
 ) {
     let mut ptrn_str = String::new();
     let file_patrn_str = generate_filename_pattern(filenamePattern);
@@ -107,6 +108,8 @@ fn run_rg_command(
     let max_depth_str = " -d ".to_string() + maxDepth.to_string().as_str() + " ";
     let mut search_binary_str = " ";
     let common_args = " -M 1000 ";
+    let mut exlude_not_common_str=" -g '!*.[zZ][iI][pP]' -g '!*.[rR][aA][rR]' -g '!*.gz' -g '!*.tgz' -g '!*.arj' -g '!*.7z' -g '!*.tar' -g '!*.bz2' -g '!*.tbz2' -g '!*.Z' -g '!*.lzh' -g '!*.ace' -g '!*.jar' -g '!*.zst' -g '!*.db' -g '!*.[mM][pP]4' -g '!*.avi' -g '!*.mkv' -g '!*.[mM][pP]3' -g '!*.[jJ][pP][gG]' -g '!*.[jJ][pP][eE][gG]' -g '!*.[bB][mM][pP]' -g '!*.[pP][nN][gG]' -g '!*.[gG][iI][fF]'  -g '!*.tiff' -g '!*.raw' -g '!*.svg' -g '!*.psd' -g '!*.eps' -g '!*.sqlite' ";
+
     // 告知前端OS情况
     window.emit("get-os", OS.to_string()).unwrap();
     println!("OS:{}", OS);
@@ -129,11 +132,14 @@ fn run_rg_command(
     if searchBinary {
         search_binary_str = " -a ";
     }
-
+    if !excludeNotCommon {
+        exlude_not_common_str = " ";
+    }
     let mut rga_str = "rga ".to_string()
         + common_args
         + max_count_str.as_str()
         + disp_hitcount_str
+        + exlude_not_common_str
         + file_patrn_str.as_str()
         + search_binary_str
         + search_hidden_str
