@@ -108,14 +108,15 @@ fn run_rg_command(
     let max_depth_str = " -d ".to_string() + maxDepth.to_string().as_str() + " ";
     let mut search_binary_str = " ";
     let common_args = " -M 1000 ";
-    let mut exlude_not_common_str=" -g '!*.[zZ][iI][pP]' -g '!*.[rR][aA][rR]' -g '!*.gz' -g '!*.tgz' -g '!*.arj' -g '!*.7z' -g '!*.tar' -g '!*.bz2' -g '!*.tbz2' -g '!*.Z' -g '!*.lzh' -g '!*.ace' -g '!*.jar' -g '!*.zst' -g '!*.db' -g '!*.[mM][pP]4' -g '!*.avi' -g '!*.mkv' -g '!*.[mM][pP]3' -g '!*.[jJ][pP][gG]' -g '!*.[jJ][pP][eE][gG]' -g '!*.[bB][mM][pP]' -g '!*.[pP][nN][gG]' -g '!*.[gG][iI][fF]'  -g '!*.tiff' -g '!*.raw' -g '!*.svg' -g '!*.psd' -g '!*.eps' -g '!*.sqlite' ";
+    //    let mut exclude_not_common_str=" -g '!*.[zZ][iI][pP]' -g '!*.[rR][aA][rR]' -g '!*.gz' -g '!*.tgz' -g '!*.arj' -g '!*.7z' -g '!*.tar' -g '!*.bz2' -g '!*.tbz2' -g '!*.Z' -g '!*.lzh' -g '!*.ace' -g '!*.jar' -g '!*.zst' -g '!*.db' -g '!*.[mM][pP]4' -g '!*.avi' -g '!*.mkv' -g '!*.[mM][pP]3' -g '!*.[jJ][pP][gG]' -g '!*.[jJ][pP][eE][gG]' -g '!*.[bB][mM][pP]' -g '!*.[pP][nN][gG]' -g '!*.[gG][iI][fF]'  -g '!*.tiff' -g '!*.raw' -g '!*.svg' -g '!*.psd' -g '!*.eps' -g '!*.sqlite' ";
+    let mut exclude_not_common_str=" -g !*.[zZ][iI][pP] -g !*.[rR][aA][rR] -g !*.gz -g !*.tgz -g !*.arj -g !*.7z -g !*.tar -g !*.bz2 -g !*.tbz2 -g !*.Z -g !*.lzh -g !*.ace -g !*.jar -g !*.zst -g !*.db -g !*.[mM][pP]4 -g !*.avi -g !*.mkv -g !*.[mM][pP]3 -g !*.[jJ][pP][gG] -g !*.[jJ][pP][eE][gG] -g !*.[bB][mM][pP] -g !*.[pP][nN][gG] -g !*.[gG][iI][fF]  -g !*.tiff -g !*.raw -g !*.svg -g !*.psd -g !*.eps -g !*.sqlite ";
 
     // 告知前端OS情况
     window.emit("get-os", OS.to_string()).unwrap();
     println!("OS:{}", OS);
 
     if regexMode {
-        ptrn_str = " --engine=auto -e '".to_string() + searchPattern + "' ";
+        ptrn_str = " --engine=auto -e ".to_string() + searchPattern + " ";
     } else {
         ptrn_str = generate_patterns(searchPattern);
     }
@@ -133,35 +134,38 @@ fn run_rg_command(
         search_binary_str = " -a ";
     }
     if !excludeNotCommon {
-        exlude_not_common_str = " ";
+        exclude_not_common_str = " ";
     }
-    let mut rga_str = "rga ".to_string()
+    let mut rga_str = " ".to_string()
         + common_args
         + max_count_str.as_str()
         + disp_hitcount_str
-        + exlude_not_common_str
-        + file_patrn_str.as_str()
         + search_binary_str
         + search_hidden_str
         + max_depth_str.as_str()
         + ptrn_str.as_str()
-        + searchPath;
+        + searchPath.replace(" ", "\\ ").as_str() // 路径中可能有空格，需要转义
+        + exclude_not_common_str
+        + file_patrn_str.as_str();
 
-    // + " 2>/dev/null";
-    if OS == "windows" {
-        rga_str += " 2>nul";
-    } else {
-        rga_str += " 2>/dev/null";
-    }
+    // if OS == "windows" {
+    //     rga_str += " 2>nul";
+    // } else {
+    //     rga_str += " 2>/dev/null";
+    // }
 
     if searchFilename {
-        rga_str = "rga ".to_string()
+        rga_str = " ".to_string()
             + file_patrn_str.as_str()
             + " --files "
             + search_hidden_str
             + max_depth_str.as_str()
             + searchPath;
     }
+    rga_str += " --no-messages ";
+
+    //替换单引号为双引号，因为windows只认双引号
+    //rga_str = rga_str.replace('\'', "\"");
     println!("Running command:{}", rga_str);
     // re用于文件名搜索的模式匹配
     if searchFilename && searchPattern.trim().len() > 0 {
@@ -181,15 +185,16 @@ fn run_rg_command(
         println!("regex:{}", re);
     }
 
-    let shell = if OS == "windows" {
-        ("cmd", ["/C"])
-    } else {
-        ("sh", ["-c"])
-    };
+    // let shell = if OS == "windows" {
+    //     ("cmd", ["/C"])
+    // } else {
+    //     ("sh", ["-c"])
+    // };
     std::thread::spawn(move || {
-        let args = [shell.1[0], &rga_str];
-        let mut child = Command::new(shell.0)
-            .args(args)
+        // let args = [shell.1[0], &rga_str];
+        // let x = rga_str.split_whitespace().collect::<Vec<&str>>() ;
+        let mut child = Command::new("rga")
+            .args(rga_str.split_whitespace().collect::<Vec<&str>>())
             .stdout(Stdio::piped())
             .spawn()
             .expect("Failed to start rga command");

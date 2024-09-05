@@ -377,7 +377,7 @@ export default {
             { include: true, type: 'yang', content: '*.yang' },
             { include: true, type: 'z', content: '*.Z' },
             { include: true, type: 'zig', content: '*.zig' },
-            { include: true, type: 'zip', content: '*.zip *.rar *.gz *.tgz *.arj *.7z *.tar *.bz2 *.tbz2 *.Z *.lzh *.ace *.jar *.tar.zst' },
+            { include: true, type: 'zip', content: '*.[zZ][iI][pP] *.[rR][aA][rR] *.gz *.tgz *.arj *.7z *.tar *.bz2 *.tbz2 *.Z *.lzh *.ace *.jar *.tar.zst' },
             { include: true, type: 'zsh', content: '*.zsh .zlogin .zlogout .zprofile .zshenv .zshrc zlogin zlogout zprofile zshenv zshrc' },
             { include: true, type: 'zstd', content: '*.zst *.zstd' }
 
@@ -494,6 +494,8 @@ export default {
                 alert('搜索路径不能为空');
                 return;
             }
+            //处理路径中的空格，进行转义。
+            // searchPath.value = searchPath.value.replace(/ /g, '\\ ');
 
             if (searchFilename.value && filenamePattern.value.trim() === '' && searchPattern.value.trim() === '') {
                 alert('搜索文件名时，搜索模式和文件名特征不能同时为空');
@@ -698,7 +700,7 @@ export default {
     flex-grow: 1;
     text-align: left !important;
     align-items: left !important;
-    color: white;
+    color: yellowgreen;
 }
 
 /*dropdown 结束 */

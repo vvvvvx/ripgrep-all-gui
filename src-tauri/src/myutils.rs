@@ -9,7 +9,7 @@ pub fn generate_filename_pattern(filename_pattern: &str) -> String {
     // 处理误输入的中文叹号
     let patternes = filename_pattern.replace("！", "!");
     for pattern in patternes.split_whitespace() {
-        ptrn = ptrn + " -g '" + pattern + "' ";
+        ptrn = ptrn + " -g " + pattern + " ";
     }
     ptrn
 }
@@ -23,7 +23,7 @@ pub fn generate_patterns(patterns: &str) -> String {
     if ptrns.len() == 1 {
         return " -F ".to_string() + ptrns[0] + " ";
     } else {
-        return " -U -e '".to_string()
+        return " -U -e ".to_string()
             + ptrns[0]
             + ".*"
             + ptrns[1]
@@ -31,7 +31,7 @@ pub fn generate_patterns(patterns: &str) -> String {
             + ptrns[1]
             + ".*"
             + ptrns[0]
-            + "' ";
+            + " ";
     }
     // -e '数据治理.*财务|财务.*数据治理'
 }
