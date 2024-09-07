@@ -7,16 +7,17 @@ use regex::Regex;
 use ripgrepa_gui::myutils::*;
 use std::env::consts::OS;
 use std::io::{self, BufRead};
+use tauri::api::file;
 //use std::os;
 
 //use std::os::linux::raw::stat;
-use std::path::Path;
+use std::path::{self, Path};
 use std::process::Command;
 use std::process::Stdio;
+use std::sync::{Arc, Mutex};
 //use tauri::api::file;
 // use tauri::api::dialog;
 //use that_open;
-
 use rfd::FileDialog;
 // use tauri::Manager;
 
@@ -99,6 +100,7 @@ fn run_rg_command(
     searchBinary: bool,     // 是否搜索二进制文件
     excludeNotCommon: bool, // 是否排除常见压缩文件
 ) {
+    let pattern = searchPattern.clone();
     let mut ptrn_str = String::new();
     let file_patrn_str = generate_filename_pattern(filenamePattern);
     let mut disp_hitcount_str = " ";
@@ -108,6 +110,7 @@ fn run_rg_command(
     let max_depth_str = " -d ".to_string() + maxDepth.to_string().as_str() + " ";
     let mut search_binary_str = " ";
     let common_args = " -M 1000 ";
+    let keywords: Vec<String> = pattern.split_whitespace().map(|s| s.to_string()).collect();
     //    let mut exclude_not_common_str=" -g '!*.[zZ][iI][pP]' -g '!*.[rR][aA][rR]' -g '!*.gz' -g '!*.tgz' -g '!*.arj' -g '!*.7z' -g '!*.tar' -g '!*.bz2' -g '!*.tbz2' -g '!*.Z' -g '!*.lzh' -g '!*.ace' -g '!*.jar' -g '!*.zst' -g '!*.db' -g '!*.[mM][pP]4' -g '!*.avi' -g '!*.mkv' -g '!*.[mM][pP]3' -g '!*.[jJ][pP][gG]' -g '!*.[jJ][pP][eE][gG]' -g '!*.[bB][mM][pP]' -g '!*.[pP][nN][gG]' -g '!*.[gG][iI][fF]'  -g '!*.tiff' -g '!*.raw' -g '!*.svg' -g '!*.psd' -g '!*.eps' -g '!*.sqlite' ";
     let mut exclude_not_common_str=" -g !*.[zZ][iI][pP] -g !*.[rR][aA][rR] -g !*.gz -g !*.tgz -g !*.arj -g !*.7z -g !*.tar -g !*.bz2 -g !*.tbz2 -g !*.Z -g !*.lzh -g !*.ace -g !*.jar -g !*.zst -g !*.db -g !*.[mM][pP]4 -g !*.avi -g !*.mkv -g !*.[mM][pP]3 -g !*.[jJ][pP][gG] -g !*.[jJ][pP][eE][gG] -g !*.[bB][mM][pP] -g !*.[pP][nN][gG] -g !*.[gG][iI][fF]  -g !*.tiff -g !*.raw -g !*.svg -g !*.psd -g !*.eps -g !*.sqlite ";
 
@@ -118,14 +121,21 @@ fn run_rg_command(
     if regexMode {
         ptrn_str = " --engine=auto -e ".to_string() + searchPattern + " ";
     } else {
-        ptrn_str = generate_patterns(searchPattern);
+        if keywords.len() > 0 {
+            ptrn_str = " -F ".to_string() + keywords[0].as_str() + " ";
+        }
+        // if keywords.len() >= 1 && keywords.len() <= 2 {
+        //     ptrn_str = generate_patterns(searchPattern);
+        // } else if keywords.len() > 2 {
+        //     ptrn_str = generate_patterns(keywords[0].as_str());
+        // }
     }
 
     if dispHitCount {
         disp_hitcount_str = " --count-matches ";
     }
     if maxCount > 0 {
-        max_count_str = " -m ".to_string() + maxCount.to_string().as_str();
+        max_count_str = " -m ".to_string() + maxCount.to_string().as_str() + " ";
     }
     if searchHidden {
         search_hidden_str = " --hidden ";
@@ -190,6 +200,7 @@ fn run_rg_command(
     // } else {
     //     ("sh", ["-c"])
     // };
+    let file_list: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     std::thread::spawn(move || {
         // let args = [shell.1[0], &rga_str];
         // let x = rga_str.split_whitespace().collect::<Vec<&str>>() ;
@@ -200,6 +211,7 @@ fn run_rg_command(
             .expect("Failed to start rga command");
         if let Some(stdout) = child.stdout.take() {
             let reader = io::BufReader::new(stdout);
+            let mut pre_path = String::new();
             for line in reader.lines() {
                 match line {
                     Ok(line) => {
@@ -217,7 +229,29 @@ fn run_rg_command(
                                 continue;
                             }
                         }
-                        window.emit("rg-output", line).unwrap();
+                        // 如果是空格分隔的多关键字，则启用pip_search
+                        if keywords.len() > 1 && !regexMode {
+                            let pathes: Vec<&str> = line.split(':').collect();
+                            let mut path = String::new();
+                            if pathes.len() == 1 {
+                                path = pathes[0].to_string();
+                            } else if pathes.len() >= 2 {
+                                if OS == "windows" {
+                                    path = pathes[0].to_string() + pathes[1];
+                                } else {
+                                    path = pathes[0].to_string();
+                                }
+                            } else {
+                                continue;
+                            }
+                            if path != pre_path {
+                                let mut file_list = file_list.lock().unwrap();
+                                file_list.push(path.clone());
+                                pre_path = path;
+                            }
+                        } else {
+                            window.emit("rg-output", line).unwrap();
+                        }
                     }
                     Err(err) => eprintln!("Error reading line: {}", err),
                 }
@@ -250,7 +284,21 @@ fn run_rg_command(
         }
 
         */
-        let status = child.wait().expect("Command wasn't running");
+
+        let mut status = child.wait().expect("Command wasn't running");
+        // 如果是空格分隔的多关键字，则启用pip_search
+        if keywords.len() > 1 && !regexMode {
+            let file_list = file_list.lock().unwrap();
+            if file_list.len() > 0 {
+                status = pip_search(
+                    window.clone(),
+                    keywords[1..].to_vec(),
+                    file_list.to_vec(),
+                    child,
+                    "-M 1000 -m 5".to_string(),
+                );
+            }
+        }
         // 发送结束信息
         println!("Command finished with status: {}", status.code().unwrap());
         match status.code().unwrap() {
@@ -260,9 +308,16 @@ fn run_rg_command(
                     .expect("Failed to send completed message");
             }
             1 => {
-                window
-                    .emit("completed", Some("搜索完成,无匹配结果!".to_string()))
-                    .expect("Failed to send completed message");
+                // 多关键字搜索最后一个关键字时为匹配单文件，可能存在之前匹配了多个文件，但最后一个文件不匹配，而以exitCode=1返回的情况，实际上是成功匹配多条结果的
+                if keywords.len() > 1 && !regexMode {
+                    window
+                        .emit("completed", Some("搜索完成!".to_string()))
+                        .expect("Failed to send completed message");
+                } else {
+                    window
+                        .emit("completed", Some("搜索完成,无匹配结果!".to_string()))
+                        .expect("Failed to send completed message");
+                }
             }
             2 => {
                 window

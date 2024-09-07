@@ -47,7 +47,7 @@
                         </div>
                     </div>
                     <input class="form-control dark-mode  mt-1 ht-45" v-model="searchPattern" @keydown="handleSearchKeydown" placeholder="全文搜索关键字：搜索模式 或 关键字 或 正则表达式"
-                        title="全文搜索关键字&#10;&#10;支持正则表达式，如：.*\.(txt|md) 。&#10;支持空格分隔两个关键字，表示同时满足这两个关键字" />
+                        title="全文搜索关键字&#10;&#10;1. 支持正则表达式（勾选左侧Regex启用）。&#10;2. 普通模式：即单关键字搜索，最常用！&#10;3. 管道模式：空格分隔多关键字，将漏斗式逐关键字过滤，较耗时。&#10;&#10;注意：&#10;管道模式下，低频关键字靠前放有利于缩短搜索时间&#10;管道模式下，仅显示最后关键字的一次命中结果&#10;" />
                     <button class="btn btn-primary mt-1 pt-1 ht-45" @click="runCommand"
                         title="为缩短搜索时间，程序会多线程并发搜索。&#10;因此，CPU占用率很高是正常现象！">搜索</button>
                 </div>
@@ -131,6 +131,13 @@
             </li>
         </ol>
         -->
+    </div>
+    <div class="container-fluid min-vh-100 d-flex flex-column ">
+        <div class="row justify-content-end">
+            <div class="col-auto">
+            <span>Developed by Viaco.&emsp;&emsp;&emsp;&emsp;  Email : viaco.xu@qq.com</span>
+        </div>
+        </div>
     </div>
 </template>
 
@@ -501,13 +508,6 @@ export default {
                 alert('搜索文件名时，搜索模式和文件名特征不能同时为空');
                 return;
             }
-            let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
-            let ptrn = t.filter(item => item.trim() !== '');//remove empty string
-
-            if (ptrn.length > 2 && regexMode.value === false) {//if search pattern has more than two keywords, show error message and return
-                alert('搜索模式最多只能有两个关键字，请重新输入');
-                return;
-            }
             if (isNaN(maxCount.value) || maxCount.value < 0) {
                 alert('最大匹配次数必须为0，或正整数');
                 return;
@@ -516,12 +516,22 @@ export default {
                 alert('目录遍历深度必须正整数');
                 return;
             }
+            let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
+            let ptrn = t.filter(item => item.trim() !== '');//remove empty string
+
+            if (ptrn.length > 1 && regexMode.value === false) {//if search pattern has more than two keywords, show error message and return
+                alert('搜索关键词大于1个，将启用管道模式，可能比较耗时!\n\n请耐心等待......');
+            }
             output.value = [];//clear output before running new command
             // reset
             getById("sort-by-file").innerText = "文件-";
             getById("sort-by-hit-count").innerText = "命中-";
             preFile.value = "";//reset preFile before running new command
-            cmdStatus.value = "搜索中...";
+            if (ptrn.length > 1 && regexMode.value === false) {
+                cmdStatus.value = "管道模式中 可能比较耗时...";
+            }else{
+                cmdStatus.value = "搜索中...";
+            }
             invoke('run_rg_command', { searchPattern: searchPattern.value.trim(), searchPath: searchPath.value, filenamePattern: filenamePattern.value, regexMode: regexMode.value, dispHitCount: dispHitCount.value, searchFilename: searchFilename.value, maxCount: Number(maxCount.value) , searchHidden: searchHidden.value , maxDepth: Number(maxDepth.value) , searchBinary: searchBinary.value ,excludeNotCommon: excludeNotCommon.value });
         };
         const openFolderDialog = async () => {
@@ -736,7 +746,8 @@ export default {
     margin-left: 0px;
     padding-top: 0px;
     padding-left: 15px;
-    height: calc(100% - 210px);
+    padding-right: 15px;
+    height: calc(100% - 230px);
     overflow-y: auto;
     background-color: #333;
     color: white;
