@@ -528,7 +528,7 @@ export default {
             getById("sort-by-hit-count").innerText = "命中-";
             preFile.value = "";//reset preFile before running new command
             if (ptrn.length > 1 && regexMode.value === false) {
-                cmdStatus.value = "管道模式中 可能比较耗时...";
+                cmdStatus.value = "管道模式中(较耗时)...";
             }else{
                 cmdStatus.value = "搜索中...";
             }
@@ -598,12 +598,25 @@ export default {
                 output.value.push({ hitCount: 1, file: firstPart, content: secondPart });
             });
             listen('completed', event => {
+                let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
+                let ptrn = t.filter(item => item.trim() !== '');//remove empty string
+
+                if (ptrn.length > 1 && regexMode.value === false) {//if search pattern has more than two keywords, show error message and return
+                    
+                    cmdStatus.value +="->("+output.value.length + ")->完成" ;
+                }else{
+                    cmdStatus.value = event.payload;
+                }
                 console.log(event.payload);
-                cmdStatus.value = event.payload;
             });
 
             listen('get-os', event => {
                 OS.value = event.payload;
+                console.log(event.payload);
+                //alert(OS);
+            });
+            listen('progress', event => {
+                cmdStatus.value = event.payload;
                 console.log(event.payload);
                 //alert(OS);
             });

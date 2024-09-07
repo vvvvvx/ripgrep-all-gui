@@ -1,11 +1,9 @@
 //use std::path::Path;
 use std::{
-    io::{self, BufRead, BufReader},
-    os::unix::process::ExitStatusExt,
+    io::{BufRead, BufReader},
     process::{Child, Command, ExitStatus, Stdio},
 };
 
-use tauri::api::file;
 //use tauri::utils::pattern;
 pub fn generate_filename_pattern(filename_pattern: &str) -> String {
     if filename_pattern.is_empty() {
@@ -88,19 +86,33 @@ pub fn pip_search(
     mut rg_process: Child,
     addtional_args: String,
 ) -> ExitStatus {
-    if keywords.len() == 0 || file_list.len() == 0 {
+    // keywords从第二个元素开始，第一个元素已搜索
+    if keywords.len() == 1 || file_list.len() == 0 {
         return rg_process
             .wait()
             .expect("Failed to pipe output from rga process");
     }
     // 针对每一个后续关键字进行过滤
     let keywords_len = keywords.len();
-    for i in 0..keywords.len() {
+    let mut key = "->[".to_string()
+        + keywords[0].as_str()
+        + "]->("
+        + file_list.len().to_string().as_str()
+        + ")";
+
+    for i in 1..keywords.len() {
         let mut next_file_list: Vec<String> = Vec::new();
         let keyword = keywords[i].clone();
+
+        key = key.clone() + "->[" + keywords[i].as_str() + "]";
+        // 输出当前关键字的进度信息
+        window
+            .emit("progress", Some(key.clone()))
+            .expect("Failed to send completed message");
+
         for file in file_list {
             let file2 = file.clone();
-            println!("在文件 {} 中搜索: {}", file, keywords[i]);
+            //println!("在文件 {} 中搜索: {}", file, keywords[i]);
             // 对于每个文件，使用 rg 进行进一步的关键字过滤
             rg_process = Command::new("rga")
                 .args(addtional_args.split_whitespace().collect::<Vec<&str>>())
@@ -134,6 +146,12 @@ pub fn pip_search(
         // 更新文件列表为当前匹配的文件列表
         file_list = next_file_list;
 
+        if file_list.len() > 0 {
+            key = key.clone() + "->(" + file_list.len().to_string().as_str() + ")";
+            window
+                .emit("progress", Some(key.clone()))
+                .expect("Failed to send completed message");
+        }
         // 输出最终过滤结果
     }
     rg_process
