@@ -39,6 +39,40 @@ pub fn generate_patterns(patterns: &str) -> String {
     }
     // -e '数据治理.*财务|财务.*数据治理'
 }
+
+// 手动处理包含空格的文件路径
+pub fn split_args(input: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut current = String::new();
+    let mut escaping = false;
+
+    for ch in input.chars() {
+        if escaping {
+            if ch == ' ' {
+                current.push(ch); // 保留转义空格
+            } else {
+                current.push('\\'); // 保留转义字符
+                current.push(ch);
+            }
+            escaping = false;
+        } else if ch == '\\' {
+            escaping = true;
+        } else if ch == ' ' {
+            if !current.is_empty() {
+                result.push(current.clone());
+                current.clear();
+            }
+        } else {
+            current.push(ch);
+        }
+    }
+
+    if !current.is_empty() {
+        result.push(current);
+    }
+
+    result
+}
 pub fn is_scoop_installed() -> bool {
     Command::new("powershell")
         .arg("-Command")

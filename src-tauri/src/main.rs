@@ -114,7 +114,7 @@ fn run_rg_command(
         .split_whitespace()
         .map(|s| s.to_string())
         .collect();
-    //    let mut exclude_not_common_str=" -g '!*.[zZ][iI][pP]' -g '!*.[rR][aA][rR]' -g '!*.gz' -g '!*.tgz' -g '!*.arj' -g '!*.7z' -g '!*.tar' -g '!*.bz2' -g '!*.tbz2' -g '!*.Z' -g '!*.lzh' -g '!*.ace' -g '!*.jar' -g '!*.zst' -g '!*.db' -g '!*.[mM][pP]4' -g '!*.avi' -g '!*.mkv' -g '!*.[mM][pP]3' -g '!*.[jJ][pP][gG]' -g '!*.[jJ][pP][eE][gG]' -g '!*.[bB][mM][pP]' -g '!*.[pP][nN][gG]' -g '!*.[gG][iI][fF]'  -g '!*.tiff' -g '!*.raw' -g '!*.svg' -g '!*.psd' -g '!*.eps' -g '!*.sqlite' ";
+    //let mut exclude_not_common_str=" -g '!*.[zZ][iI][pP]' -g '!*.[rR][aA][rR]' -g '!*.gz' -g '!*.tgz' -g '!*.arj' -g '!*.7z' -g '!*.tar' -g '!*.bz2' -g '!*.tbz2' -g '!*.Z' -g '!*.lzh' -g '!*.ace' -g '!*.jar' -g '!*.zst' -g '!*.db' -g '!*.[mM][pP]4' -g '!*.avi' -g '!*.mkv' -g '!*.[mM][pP]3' -g '!*.[jJ][pP][gG]' -g '!*.[jJ][pP][eE][gG]' -g '!*.[bB][mM][pP]' -g '!*.[pP][nN][gG]' -g '!*.[gG][iI][fF]'  -g '!*.tiff' -g '!*.raw' -g '!*.svg' -g '!*.psd' -g '!*.eps' -g '!*.sqlite' ";
     let mut exclude_not_common_str=" -g !*.[zZ][iI][pP] -g !*.[rR][aA][rR] -g !*.gz -g !*.tgz -g !*.arj -g !*.7z -g !*.tar -g !*.bz2 -g !*.tbz2 -g !*.Z -g !*.lzh -g !*.ace -g !*.jar -g !*.zst -g !*.db -g !*.[mM][pP]4 -g !*.avi -g !*.mkv -g !*.[mM][pP]3 -g !*.[jJ][pP][gG] -g !*.[jJ][pP][eE][gG] -g !*.[bB][mM][pP] -g !*.[pP][nN][gG] -g !*.[gG][iI][fF]  -g !*.tiff -g !*.raw -g !*.svg -g !*.psd -g !*.eps -g !*.sqlite ";
 
     // 告知前端OS情况
@@ -177,8 +177,13 @@ fn run_rg_command(
     }
     rga_str += " --no-messages ";
 
-    //替换单引号为双引号，因为windows只认双引号
-    //rga_str = rga_str.replace('\'', "\"");
+    //替换单引号，windows不需要单引号，linux需要
+    // if OS == "windows" {
+    //     rga_str = rga_str.replace('\'', "");
+    // }
+
+    //rga_str = rga_str.replace('\'', "");
+    println!("rga_str:{:?}", split_args(&rga_str));
     println!("Running command:{}", rga_str);
     // re用于文件名搜索的模式匹配
     if searchFilename && searchPattern.trim().len() > 0 {
@@ -217,7 +222,8 @@ fn run_rg_command(
                 .expect("Failed to send completed message");
         }
         let mut child = Command::new("rga")
-            .args(rga_str.split_whitespace().collect::<Vec<&str>>())
+            .args(split_args(&rga_str))
+            //.args(rga_str.split_whitespace().collect::<Vec<&str>>())
             .stdout(Stdio::piped())
             .spawn()
             .expect("Failed to start rga command");
