@@ -18,6 +18,7 @@ use std::process::{Command, ExitStatus};
 //use tauri::api::file;
 // use tauri::api::dialog;
 //use that_open;
+//use onig::Regex;
 use rfd::FileDialog;
 // use tauri::Manager;
 
@@ -109,7 +110,7 @@ fn run_rg_command(
     let mut search_hidden_str = " ";
     let max_depth_str = " -d ".to_string() + maxDepth.to_string().as_str() + " ";
     let mut search_binary_str = " ";
-    let common_args = " -M 1000 ";
+    let common_args = " -M 1000 --max-columns-preview ";
     let keywords: Vec<String> = searchPattern
         .split_whitespace()
         .map(|s| s.to_string())
@@ -146,7 +147,7 @@ fn run_rg_command(
     if searchBinary {
         search_binary_str = " -a ";
     }
-    if !excludeNotCommon {
+    if !excludeNotCommon || filenamePattern.trim().len() > 0 {
         exclude_not_common_str = " ";
     }
     let mut rga_str = " ".to_string()
@@ -173,7 +174,7 @@ fn run_rg_command(
             + " --files "
             + search_hidden_str
             + max_depth_str.as_str()
-            + searchPath;
+            + searchPath.replace(" ", "\\ ").as_str();
     }
     rga_str += " --no-messages ";
 

@@ -19,6 +19,7 @@ rfd = "0.14.1"
 dirs = "5.0.1"
 regex = "1.5.4"
 #ripgrep_all = "0.10.6"
+#onig = "6"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
