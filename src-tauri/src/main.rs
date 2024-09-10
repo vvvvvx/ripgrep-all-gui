@@ -7,7 +7,7 @@ use regex::Regex;
 use ripgrepa_gui::myutils::*;
 use std::env::consts::OS;
 use std::io::{self, BufRead};
-use tauri::window;
+use tauri::{window, EventLoopMessage};
 //use std::os;
 
 //use std::os::linux::raw::stat;
@@ -90,7 +90,7 @@ fn open_folder_dialog() -> String {
 fn run_rg_command(
     window: tauri::Window,
     searchPattern: &str,    // 全文搜索模式
-    searchPath: &str,       // 搜索路径
+    mut searchPath: String, // 搜索路径
     filenamePattern: &str,  // 文件名模式特征
     regexMode: bool,        // 是否使用正则模式
     dispHitCount: bool,     // 是否显示匹配行数
@@ -150,6 +150,13 @@ fn run_rg_command(
     if !excludeNotCommon || filenamePattern.trim().len() > 0 {
         exclude_not_common_str = " ";
     }
+
+    // 检查路径是否是 C:或D:格式，如果是，则自动添加反斜杠
+    let r = Regex::new(r"^[A-Za-z]:$").unwrap();
+    if r.is_match(searchPath.as_str()) {
+        searchPath = searchPath + "\\";
+    }
+
     let mut rga_str = " ".to_string()
         + common_args
         + max_count_str.as_str()

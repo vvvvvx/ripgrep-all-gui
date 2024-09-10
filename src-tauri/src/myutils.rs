@@ -56,7 +56,12 @@ pub fn split_args(input: &str) -> Vec<String> {
             }
             escaping = false;
         } else if ch == '\\' {
-            escaping = true;
+            if current.ends_with(':') {
+                // 如果当前字符是路径分隔符且前一个字符是冒号，保留路径分隔符
+                current.push(ch);
+            } else {
+                escaping = true;
+            }
         } else if ch == ' ' {
             if !current.is_empty() {
                 result.push(current.clone());
