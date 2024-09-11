@@ -5,7 +5,7 @@
         <div class="row">
             <div class="col-12 ">
                 <div class="input-group mb-0 mt-0 ">
-                    <span class="input-group-text dark-mode ht-45">&emsp;搜索路径</span>
+                    <span class="input-group-text dark-mode ht-45">搜索位置</span>
                     <input class="form-control dark-mode ht-45" v-model="searchPath" placeholder="Enter search path"
                         title="搜索根目录&#10;&#10;全盘搜索时间也不会太久，&#10;但缩小搜索范围，会大大缩短搜索时间。" />
                     <button class="btn btn-primary  pt-1 ht-45" @click="openFolderDialog" title="点击选择搜索根路径">...</button>
@@ -13,7 +13,7 @@
             </div>
             <div class="col-6 ">
                 <div class="input-group mb-0 mt-0 ">
-                    <span class="input-group-text dark-mode mt-1 ht-45 d-flex">文件名特征</span>
+                    <span class="input-group-text dark-mode mt-1 ht-45 d-flex">文件类别</span>
                     <!--
                     <input class="form-control dark-mode mt-1 ht-45" v-model="filenamePattern"
                         placeholder="空格分隔，如：*研究报告*.docx  *.zip  *.pdf"
@@ -21,7 +21,7 @@
                         -->
                     <!--新加Begin-->
                     <div class="form-control dropdown mt-1 ht-45  flex-column" style="padding: 0%;" @click="handleDropdownClick"> 
-                        <input  class=" dark-mode mt-0  w-100 " ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="height:43px ;border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="空格分隔，如：*研究报告*.docx  *.zip  *.pdf" title="文件名过滤特征，支持通配符。&#10;&#10;用空格分隔多个特征，默认为空，搜索所有文件，速度慢。&#10;&#10;例如：&#10;*.docx *.pdf  表示搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*.*  表示搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示排除扩展名为 txt 的文件。&#10;!*研究报告*.* 表示排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示排除文件名包含“研究报告”的 pdf 文件。">
+                        <input  class=" dark-mode mt-0  w-100 " ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="height:43px ;border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="默认空，搜所有类别，较慢。可输：*.zip  *.pdf  ==>全文关键字在右框输入" title="文件类别，支持通配符。&#10;&#10;用空格分隔多个类别，-默认为空，搜索所有文件，速度慢。&#10;&#10;例如：&#10;*.docx *.pdf  表示搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*.*  表示搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示排除扩展名为 txt 的文件。&#10;!*研究报告*.* 表示排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示排除文件名包含“研究报告”的 pdf 文件。">
                         <div v-if="filteredItems.length" class="dropdown-list"  title="✔ Include 包含 此特征&#10;✘ Exclude 排除 此特征&#10;&#10;点击复选框/Ctrl+Space切换&#10;&#10;上下方向键选中，鼠标点击/Enter确认">
                             <div v-for="(item, index) in filteredItems" :key="index" @click="selectItem(item)" :class="{'selected': index === selectedIndex}" class="dropdown-item">
                                 <span class="push-button" @click.stop="togglePush(item)" :style="{ color: item.include ? 'green' : 'red' }" >{{ item.include ? '✔' : '✘' }}</span>
@@ -46,7 +46,7 @@
                             <input type="checkbox" class="form-check-input mt-2" id="regex-mode" v-model="regexMode" />
                         </div>
                     </div>
-                    <input class="form-control dark-mode  mt-1 ht-45" v-model="searchPattern" @keydown="handleSearchKeydown" placeholder="全文搜索关键字：搜索模式 或 关键字 或 正则表达式"
+                    <input class="form-control dark-mode  mt-1 ht-45" v-model="searchPattern" @keydown="handleSearchKeydown" placeholder="全文搜索关键字  如：市场调研 销售数据 业绩喜人"
                         title="全文搜索关键字&#10;&#10;1. 支持正则表达式。&#10;2. 普通模式：即单关键字搜索，最常用！&#10;3. 管道模式：空格分隔多关键字，将漏斗式逐关键字过滤，较耗时。&#10;&#10;注意：&#10;管道模式下，低频关键字靠前放有利于缩短搜索时间&#10;管道模式下，仅显示最后关键字的一次命中结果&#10;&#10;正则说明：&#10;1. 全文搜索时，支持高级正则模式先行和后行断言，如：(?=.*K1)(?=.*K2)(?=.*K3)&emsp; 表示字符串同时含K1、K2、K3&#10;2. 仅搜文件名 时，默认为普通正则模式，不必勾选Regex" />
                     <button class="btn btn-primary mt-1 pt-1 ht-45" @click="runCommand"
                         title="为缩短搜索时间，程序会多线程并发搜索。&#10;因此，CPU占用率很高是正常现象！">搜索</button>
@@ -135,7 +135,7 @@
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
-            <span>Developed by Viaco.&emsp;&emsp;&emsp;&emsp;  Email : viaco.xu@qq.com</span>
+            <span>Version:1.0.0 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
         </div>
         </div>
     </div>
@@ -516,6 +516,11 @@ export default {
                 alert('目录遍历深度必须正整数');
                 return;
             }
+            if(filenamePattern.value.trim() === '') {
+                alert('【文件类别】未指定，将搜索所有类别的文件，速度较慢！\n\n如需终止搜索，请关闭黑色弹窗或本程序。\n\n请耐心等待！');
+                
+            }
+
             let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
             let ptrn = t.filter(item => item.trim() !== '');//remove empty string
 
@@ -617,6 +622,11 @@ export default {
             });
             listen('progress', event => {
                 cmdStatus.value = event.payload;
+                console.log(event.payload);
+                //alert(OS);
+            });
+            listen('overdate', event => {
+                alert(event.payload);
                 console.log(event.payload);
                 //alert(OS);
             });

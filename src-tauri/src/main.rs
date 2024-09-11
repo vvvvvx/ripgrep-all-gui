@@ -11,8 +11,9 @@ use tauri::{window, EventLoopMessage};
 //use std::os;
 
 //use std::os::linux::raw::stat;
+use chrono::{Local, NaiveDate};
 use std::path::Path;
-use std::process::Stdio;
+use std::process::{Child, Stdio};
 use std::process::{Command, ExitStatus};
 //use std::sync::{Arc, Mutex};
 //use tauri::api::file;
@@ -39,6 +40,7 @@ use rfd::FileDialog;
 //     let output_str = String::from_utf8_lossy(&output.stdout);
 //     return output_str.to_string();
 // }
+const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2025, 9, 30);
 
 #[tauri::command]
 fn goto_folder(folderPath: &str) {
@@ -101,6 +103,15 @@ fn run_rg_command(
     searchBinary: bool,     // 是否搜索二进制文件
     excludeNotCommon: bool, // 是否排除常见压缩文件
 ) {
+    // 判断软件是否过期
+    let current_date = Local::now().naive_local().date();
+    if current_date > OVER_DATE.unwrap() {
+        window
+            .emit("overdate", Some("软件已过期！\n请根据窗口右下方联系方式索取最新版，或到下面网址下载最新版：\n\nhttps://sourceforge.net/projects/fast-full-text-search/files/latest/download ".to_string()))
+            .unwrap();
+        return;
+    }
+
     //let pattern = searchPattern.clone();
     let mut ptrn_str = String::new();
     let file_patrn_str = generate_filename_pattern(filenamePattern);
@@ -128,11 +139,6 @@ fn run_rg_command(
         if keywords.len() > 0 {
             ptrn_str = " -F ".to_string() + keywords[0].as_str() + " ";
         }
-        // if keywords.len() >= 1 && keywords.len() <= 2 {
-        //     ptrn_str = generate_patterns(searchPattern);
-        // } else if keywords.len() > 2 {
-        //     ptrn_str = generate_patterns(keywords[0].as_str());
-        // }
     }
 
     if dispHitCount {
@@ -168,12 +174,6 @@ fn run_rg_command(
         + searchPath.replace(" ", "\\ ").as_str() // 路径中可能有空格，需要转义
         + exclude_not_common_str
         + file_patrn_str.as_str();
-
-    // if OS == "windows" {
-    //     rga_str += " 2>nul";
-    // } else {
-    //     rga_str += " 2>/dev/null";
-    // }
 
     if searchFilename {
         rga_str = " ".to_string()
@@ -211,13 +211,6 @@ fn run_rg_command(
         println!("regex:{}", re);
     }
 
-    // let shell = if OS == "windows" {
-    //     ("cmd", ["/C"])
-    // } else {
-    //     ("sh", ["-c"])
-    // };
-
-    // let file_list: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
     std::thread::spawn(move || {
         // 如果是空格分隔的多关键字，则启用pip_search ，更新进度
         if keywords.len() > 1 && !regexMode {
