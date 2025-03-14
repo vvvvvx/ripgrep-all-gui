@@ -240,7 +240,7 @@ fn run_rg_command(
 
         #[cfg(windows)]
         let mut child = Command::new("rga")
-            .args(split_args(&rga_str))
+            .args(rga_args)
             // windows下需要设置不显示命令行窗口
             .creation_flags(0x08000000) // CREATE_NO_WINDOW
             .stdout(Stdio::piped())
