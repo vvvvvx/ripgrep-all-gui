@@ -6,27 +6,27 @@ use open::that;
 use regex::Regex;
 use ripgrepa_gui::myutils::*;
 use std::env::consts::OS;
-use std::io::{self, BufRead, Read};
-//use tauri::{window, EventLoopMessage};
+use std::io::{self, BufRead};
+use tauri::{window, EventLoopMessage};
 //use std::os;
 
 //use std::os::linux::raw::stat;
-use chrono::{format, Local, NaiveDate};
+use chrono::{Local, NaiveDate};
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 use std::path::Path;
-use std::process::Stdio;
+use std::process::{Child, Stdio};
 use std::process::{Command, ExitStatus};
 
 use rfd::FileDialog;
 // use tauri::Manager;
 
-//use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 
 // 创建一个全局变量来存储子进程的句柄
-//static mut CHILD_PROCESS: Option<Arc<Mutex<Child>>> = None;
+static mut CHILD_PROCESS: Option<Arc<Mutex<Child>>> = None;
 
-const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2026, 12, 30);
+const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2025, 9, 30);
 
 #[tauri::command]
 fn goto_folder(folderPath: &str) {
@@ -119,14 +119,13 @@ fn run_rg_command(
     window.emit("get-os", OS.to_string()).unwrap();
     println!("OS:{}", OS);
 
-    //if regexMode {
-    //    println!("Regex:{}", re.to_string());
-    //    ptrn_str = format!(" --engine=auto -e  {} ", searchPattern);
-    //} else {
-    //    if keywords.len() > 0 {
-    //        ptrn_str = " -F ".to_string() + keywords[0].as_str() + " ";
-    //    }
-    //}
+    if regexMode {
+        ptrn_str = " --engine=auto -e ".to_string() + searchPattern + " ";
+    } else {
+        if keywords.len() > 0 {
+            ptrn_str = " -F ".to_string() + keywords[0].as_str() + " ";
+        }
+    }
 
     if dispHitCount {
         disp_hitcount_str = " --count-matches ";
@@ -156,51 +155,30 @@ fn run_rg_command(
         + disp_hitcount_str
         + search_binary_str
         + search_hidden_str
-        + max_depth_str.as_str();
+        + max_depth_str.as_str()
+        + ptrn_str.as_str()
+        + searchPath.replace(" ", "\\ ").as_str() // 路径中可能有空格，需要转义
+        + exclude_not_common_str
+        + file_patrn_str.as_str();
 
-    //整理rga args
-    let mut rga_args = split_args(&rga_str);
-
-    // 处理搜索关键字
-    if regexMode {
-        println!("Regex:{}", re.to_string());
-        rga_args.push("--engine=auto".to_string());
-        rga_args.push("-e".to_string());
-        rga_args.push(searchPattern.to_string());
-    } else {
-        if keywords.len() > 0 {
-            rga_args.push("-F".to_string());
-            rga_args.push(keywords[0].to_string());
-        }
-    }
-
-    rga_args.append(&mut split_args(&exclude_not_common_str));
-    rga_args.append(&mut split_args(&file_patrn_str));
-
-    //如果仅搜索文件名，则重新制作参数，添加 --files 参数
     if searchFilename {
-        //清空重新制作
-        rga_args.clear();
-        rga_args.append(&mut split_args(&file_patrn_str));
-        rga_args.push("--files".to_string());
-        rga_args.append(&mut split_args(&search_hidden_str));
-        rga_args.append(&mut split_args(&max_depth_str));
-        rga_args.push(searchPattern.to_string());
+        rga_str = " ".to_string()
+            + file_patrn_str.as_str()
+            + " --files "
+            + search_hidden_str
+            + max_depth_str.as_str()
+            + searchPath.replace(" ", "\\ ").as_str();
     }
-    //rga_str += " --no-messages ";
-    rga_args.push("--no-messages".to_string());
+    rga_str += " --no-messages ";
 
-    // 路径中可能有空格，需要转义
-    rga_args.push(searchPath.replace(" ", "\\ "));
-
-    //rga_str += searchPath.replace(" ", "\\ ").as_str(); // 路径中可能有空格，需要转义
     //替换单引号，windows不需要单引号，linux需要
     // if OS == "windows" {
     //     rga_str = rga_str.replace('\'', "");
     // }
 
-    println!("rga_str:{:?}", rga_args);
-    //println!("Running command:rga {}", rga_str);
+    //rga_str = rga_str.replace('\'', "");
+    println!("rga_str:{:?}", split_args(&rga_str));
+    println!("Running command:{}", rga_str);
     // re用于文件名搜索的模式匹配
     if searchFilename && searchPattern.trim().len() > 0 {
         re = match Regex::new(searchPattern) {
@@ -218,7 +196,17 @@ fn run_rg_command(
         };
         println!("regex:{}", re);
     }
-
+    // 如果正在运行，则终止进程
+    // unsafe {
+    //     if let Some(child_process) = CHILD_PROCESS.clone() {
+    //         let mut child = child_process.lock().unwrap();
+    //         if let Err(e) = child.kill() {
+    //             println!("Failed to kill the child process: {}", e);
+    //         } else {
+    //             println!("Child process terminated successfully.");
+    //         }
+    //     }
+    // }
     std::thread::spawn(move || {
         // 如果是空格分隔的多关键字，则启用pip_search ，更新进度
         if keywords.len() > 1 && !regexMode {
@@ -232,8 +220,7 @@ fn run_rg_command(
         }
         #[cfg(not(windows))]
         let mut child = Command::new("rga")
-            //.args(split_args(&rga_str))
-            .args(rga_args)
+            .args(split_args(&rga_str))
             .stdout(Stdio::piped())
             .spawn()
             .expect("Failed to start rga command");
@@ -247,12 +234,6 @@ fn run_rg_command(
             .spawn()
             .expect("Failed to start rga command");
 
-        // if !output.status.success() {
-        //     window
-        //         .emit("error", String::from_utf8_lossy(&output.stderr).to_string())
-        //         .unwrap();
-        //     return;
-        // }
         // let mut child = if OS == "windows" {
         //     Command::new("rga")
         //         .args(split_args(&rga_str))
@@ -272,90 +253,128 @@ fn run_rg_command(
         // 保存 stdout
         //let stdout_t = child.stdout.take().expect("Failed to take stdout");
         // 将子进程放入全局变量中
+        unsafe {
+            if CHILD_PROCESS.is_some() {
+                // 如果已经有一个子进程在运行，先终止它
+                if let Some(previous_child_arc) = CHILD_PROCESS.take() {
+                    // previous_child_arc现在是一个独立的所有者，可以安全地加锁并使用
+                    let mut previous_child = previous_child_arc.lock().unwrap();
+                    if let Err(e) = previous_child.kill() {
+                        println!("Failed to kill previous child process: {}", e);
+                    }
+                }
+            }
+            CHILD_PROCESS = Some(Arc::new(Mutex::new(child)));
+        }
+        let child_clone = unsafe { CHILD_PROCESS.as_ref().unwrap().clone() }; // 克隆 Arc<Mutex<Child>> 引用
+        let stdout = {
+            let mut child = child_clone.lock().unwrap();
+            child.stdout.take().expect("Failed to take stdout")
+        };
+
+        // 将子进程放入全局变量中
+        // unsafe {
+        //     CHILD_PROCESS = Some(Arc::new(Mutex::new(child)));
+        // }
+
         // unsafe {
         //     if CHILD_PROCESS.is_some() {
         //         // 如果已经有一个子进程在运行，先终止它
-        //         if let Some(previous_child_arc) = CHILD_PROCESS.take() {
-        //             // previous_child_arc现在是一个独立的所有者，可以安全地加锁并使用
-        //             let mut previous_child = previous_child_arc.lock().unwrap();
-        //             if let Err(e) = previous_child.kill() {
-        //                 println!("Failed to kill previous child process: {}", e);
-        //             }
+        //         let mut previous_child = CHILD_PROCESS.take().unwrap().lock().unwrap();
+        //         if let Err(e) = previous_child.kill() {
+        //             println!("Failed to kill previous child process: {}", e);
         //         }
         //     }
         //     CHILD_PROCESS = Some(Arc::new(Mutex::new(child)));
         // }
-        // let child_clone = unsafe { CHILD_PROCESS.as_ref().unwrap().clone() }; // 克隆 Arc<Mutex<Child>> 引用
-        // let stdout = {
-        //     let mut child = child_clone.lock().unwrap();
-        //     child.stdout.take().expect("Failed to take stdout")
-        // };
 
-        println!("Child process started.");
         let mut file_list: Vec<String> = Vec::new();
 
-        if let Some(stdout) = child.stdout.take() {
-            let reader = io::BufReader::new(stdout);
-            let mut pre_path = String::new();
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
-                        if searchFilename {
-                            //let dir_path = Path::new(line.as_str());
-                            //let filename = dir_path.file_name().unwrap().to_str().unwrap();
-                            //    println!("filename:{}", filename);
-                            if let Some(filename) = Path::new(&line)
-                                .file_name()
-                                .and_then(|os_str| os_str.to_str())
-                            {
-                                if re.is_match(filename) {
-                                    window.emit("rg-output", line).unwrap();
-                                }
-                                continue;
+        //if let Some(stdout) = child.stdout.take() {
+        let reader = io::BufReader::new(stdout);
+        let mut pre_path = String::new();
+        for line in reader.lines() {
+            match line {
+                Ok(line) => {
+                    if searchFilename {
+                        //let dir_path = Path::new(line.as_str());
+                        //let filename = dir_path.file_name().unwrap().to_str().unwrap();
+                        //    println!("filename:{}", filename);
+                        if let Some(filename) = Path::new(&line)
+                            .file_name()
+                            .and_then(|os_str| os_str.to_str())
+                        {
+                            if re.is_match(filename) {
+                                window.emit("rg-output", line).unwrap();
                             }
-                        }
-                        // 如果是空格分隔的多关键字，则启用pip_search
-                        if keywords.len() > 1 && !regexMode {
-                            // 获取文件路径
-                            let pathes: Vec<&str> = line.split(':').collect();
-                            let mut path = String::new();
-
-                            if pathes.len() == 1 {
-                                path = pathes[0].to_string();
-                            } else if pathes.len() >= 2 {
-                                if OS == "windows" {
-                                    path = pathes[0].to_string() + pathes[1];
-                                } else {
-                                    path = pathes[0].to_string();
-                                }
-                            } else {
-                                continue;
-                            }
-                            if path != pre_path {
-                                //let mut file_list = file_list.lock().unwrap();
-                                file_list.push(path.clone());
-                                pre_path = path;
-                            }
-                        } else {
-                            //太大的行抛弃
-                            //if line.len() < 1000 {
-                            window.emit("rg-output", line).unwrap();
-                            //}
+                            continue;
                         }
                     }
-                    Err(err) => eprintln!("Error reading line: {}", err),
+                    // 如果是空格分隔的多关键字，则启用pip_search
+                    if keywords.len() > 1 && !regexMode {
+                        // 获取文件路径
+                        let pathes: Vec<&str> = line.split(':').collect();
+                        let mut path = String::new();
+
+                        if pathes.len() == 1 {
+                            path = pathes[0].to_string();
+                        } else if pathes.len() >= 2 {
+                            if OS == "windows" {
+                                path = pathes[0].to_string() + pathes[1];
+                            } else {
+                                path = pathes[0].to_string();
+                            }
+                        } else {
+                            continue;
+                        }
+                        if path != pre_path {
+                            //let mut file_list = file_list.lock().unwrap();
+                            file_list.push(path.clone());
+                            pre_path = path;
+                        }
+                    } else {
+                        window.emit("rg-output", line).unwrap();
+                    }
+                }
+                Err(err) => eprintln!("Error reading line: {}", err),
+            }
+        }
+        //}
+
+        /*
+        if let Some(stdout) = child.stdout.take() {
+            let reader = io::BufReader::new(stdout);
+            for chunk in reader.split(b'\n') {
+                match chunk {
+                    Ok(chunk) => {
+                        let line = String::from_utf8_lossy(&chunk).to_string();
+                        if searchFilename {
+                            let dir_path = Path::new(&line);
+                            if let Some(filename) = dir_path.file_name() {
+                                if let Some(filename_str) = filename.to_str() {
+                                    if re.is_match(filename_str) {
+                                        window.emit("rg-output", line).unwrap();
+                                    }
+                                }
+                            }
+                            continue;
+                        }
+                        window.emit("rg-output", line).unwrap();
+                    }
+                    Err(err) => eprintln!("Error reading chunk: {}", err),
                 }
             }
         }
 
+        */
         // 克隆 CHILD_PROCESS 的 Arc
-        // let child_clone = unsafe { CHILD_PROCESS.as_ref().unwrap().clone() };
-        // // 从 Arc 中借用 child
-        // let mut child_ref = child_clone.lock().unwrap();
-        // let child: &mut Child = &mut *child_ref;
+        let child_clone = unsafe { CHILD_PROCESS.as_ref().unwrap().clone() };
+        // 从 Arc 中借用 child
+        let mut child_ref = child_clone.lock().unwrap();
+        let child: &mut Child = &mut *child_ref;
 
         // 如果是空格分隔的多关键字，则启用pip_search
-        if keywords.len() > 1 && !regexMode && file_list.len() > 0 {
+        if keywords.len() > 1 && !regexMode {
             let s = "->[".to_string()
                 + keywords[0].as_str()
                 + "]->("
@@ -365,6 +384,8 @@ fn run_rg_command(
             emit_signal(window.clone(), "progress", s.as_str());
 
             if file_list.len() > 0 {
+                // 检查 child 是否存在
+                //if let Some(child) = *child_ref.as_mut() {
                 let status = pip_search(
                     window.clone(),
                     keywords.to_vec(),
@@ -381,7 +402,7 @@ fn run_rg_command(
             println!("Command finished with status: {}", status.code().unwrap());
             emit_completed_signal(window, status);
         }
-        // 清除全局变量中的子进程句柄
+        // // 清除全局变量中的子进程句柄
         // unsafe {
         //     CHILD_PROCESS = None;
         // }
@@ -389,30 +410,30 @@ fn run_rg_command(
 }
 
 // 新增一个命令来终止子进程
-// #[tauri::command]
-// fn stop_rg_command(window: tauri::Window) {
-//     unsafe {
-//         if let Some(child_process) = CHILD_PROCESS.clone() {
-//             let mut child = child_process.lock().unwrap();
-//             if let Err(e) = child.kill() {
-//                 println!("Failed to kill the child process: {}", e);
-//                 window
-//                     .emit("completed", Some("终止命令失败!".to_string()))
-//                     .unwrap();
-//             } else {
-//                 println!("Child process terminated successfully.");
-//                 window
-//                     .emit("completed", Some("命令已终止!".to_string()))
-//                     .unwrap();
-//             }
-//         } else {
-//             println!("No child process to terminate.");
-//             window
-//                 .emit("completed", Some("没有正在运行的进程!".to_string()))
-//                 .unwrap();
-//         }
-//     }
-// }
+#[tauri::command]
+fn stop_rg_command(window: tauri::Window) {
+    unsafe {
+        if let Some(child_process) = CHILD_PROCESS.clone() {
+            let mut child = child_process.lock().unwrap();
+            if let Err(e) = child.kill() {
+                println!("Failed to kill the child process: {}", e);
+                window
+                    .emit("completed", Some("终止命令失败!".to_string()))
+                    .unwrap();
+            } else {
+                println!("Child process terminated successfully.");
+                window
+                    .emit("completed", Some("命令已终止!".to_string()))
+                    .unwrap();
+            }
+        } else {
+            println!("No child process to terminate.");
+            window
+                .emit("completed", Some("没有正在运行的进程!".to_string()))
+                .unwrap();
+        }
+    }
+}
 
 fn emit_completed_signal(window: tauri::Window, status: ExitStatus) {
     match status.code().unwrap() {
@@ -420,7 +441,7 @@ fn emit_completed_signal(window: tauri::Window, status: ExitStatus) {
             emit_signal(window, "completed", "搜索完成!");
         }
         2 => {
-            emit_signal(window, "completed", "搜索完成!");
+            emit_signal(window, "completed", "搜索完成，已忽略无法打开的文件!");
         }
         127 => {
             emit_signal(window, "completed", "搜索命令rga不存在!");
@@ -476,7 +497,7 @@ fn main() {
             open_folder_dialog,
             goto_folder,
             get_home_dir,
-            //stop_rg_command
+            stop_rg_command
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

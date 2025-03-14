@@ -151,7 +151,7 @@ pub fn pip_search(
     window: tauri::Window,
     keywords: Vec<String>,
     mut file_list: Vec<String>,
-    mut rg_process: Child,
+    rg_process: &mut Child,
     addtional_args: String,
 ) -> ExitStatus {
     // keywords从第二个元素开始，第一个元素已搜索

@@ -1,6 +1,6 @@
 [package]
 name = "ripgrepa-gui"
-version = "0.1.0"
+version = "1.0.2"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -19,9 +19,11 @@ rfd = "0.14.1"
 dirs = "5.0.1"
 regex = "1.5.4"
 chrono = "0.4.38"
+winapi = { version = "0.3.9", features = ["winuser"] }
 #ripgrep_all = "0.10.6"
 #onig = "6"
-
+#lazy_static = "1.4.0"
+#tauri = { version = "1.0", features = ["api-all"] }
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]

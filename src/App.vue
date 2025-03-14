@@ -37,6 +37,8 @@ import Search from "./components/Search_instant.vue";
   -webkit-text-size-adjust: 100%;
 }
 
+
+
 /*
 .container {
   width: 100%;

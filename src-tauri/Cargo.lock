@@ -3301,7 +3301,7 @@ dependencies = [
 
 [[package]]
 name = "ripgrepa-gui"
-version = "0.1.0"
+version = "1.0.2"
 dependencies = [
  "chrono",
  "dirs",
@@ -3312,6 +3312,7 @@ dependencies = [
  "serde_json",
  "tauri",
  "tauri-build",
+ "winapi",
 ]
 
 [[package]]

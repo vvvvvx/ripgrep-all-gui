@@ -1,28 +1,21 @@
 <template>
-
-
     <div class="header " style="z-index: 1000;">
         <div class="row">
-            <div class="col-12 ">
+            <div class="col-6 ht-45">
                 <div class="input-group mb-0 mt-0 ">
                     <span class="input-group-text dark-mode ht-45">搜索位置</span>
                     <input class="form-control dark-mode ht-45" v-model="searchPath" placeholder="Enter search path"
                         title="搜索根目录&#10;&#10;全盘搜索时间也不会太久，&#10;但缩小搜索范围，会大大缩短搜索时间。" />
-                    <button class="btn btn-primary  pt-1 ht-45" @click="openFolderDialog" title="点击选择搜索根路径">...</button>
+                    <button class="btn btn-secondary pt-1 ht-45" @click="openFolderDialog" title="点击选择搜索根路径">...</button>
                 </div>
-            </div>
-            <div class="col-6 ">
-                <div class="input-group mb-0 mt-0 ">
-                    <span class="input-group-text dark-mode mt-1 ht-45 d-flex">文件类别</span>
-                    <!--
-                    <input class="form-control dark-mode mt-1 ht-45" v-model="filenamePattern"
-                        placeholder="空格分隔，如：*研究报告*.docx  *.zip  *.pdf"
-                        title="文件名过滤特征，支持通配符。&#10;&#10;用空格分隔多个特征，默认为空，搜索所有文件。&#10;&#10;例如：&#10;*.docx *.pdf  表示搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*.*  表示搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示排除扩展名为 txt 的文件。&#10;!*研究报告*.* 表示排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示排除文件名包含“研究报告”的 pdf 文件。" />
-                        -->
+                <div class="input-group mb-1 mt-0 ">
+                    <span class="input-group-text dark-mode mt-2 ht-45 d-flex">文件类别</span>
                     <!--新加Begin-->
-                    <div class="form-control dropdown mt-1 ht-45  flex-column" style="padding: 0%;" @click="handleDropdownClick"> 
-                        <input  class=" dark-mode mt-0  w-100 " ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="height:43px ;border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="默认空，搜所有类别，较慢。可输：*.zip  *.pdf  ==>全文关键字在右框输入" title="文件类别，支持通配符。&#10;&#10;用空格分隔多个类别，-默认为空，搜索所有文件，速度慢。&#10;&#10;例如：&#10;*.docx *.pdf  表示搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*.*  表示搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示排除扩展名为 txt 的文件。&#10;!*研究报告*.* 表示排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示排除文件名包含“研究报告”的 pdf 文件。">
-                        <div v-if="filteredItems.length" class="dropdown-list"  title="✔ Include 包含 此特征&#10;✘ Exclude 排除 此特征&#10;&#10;点击复选框/Ctrl+Space切换&#10;&#10;上下方向键选中，鼠标点击/Enter确认">
+                    <div class="form-control dropdown mt-2 ht-45  flex-column" style="padding: 0%;" @click="handleDropdownClick"> 
+                        <input  class=" dark-mode mt-0  w-100 ht-43" ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="默认空，搜所有类别，较慢。可输：*.zip  *.pdf  ==>全文关键字在右框输入" title="文件类别，支持通配符。&#10;&#10;用空格分隔多个类别，-默认为空，搜索所有文件，速度慢。&#10;&#10;例如：&#10;*.docx *.pdf  表示搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*.*  表示搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示排除扩展名为 txt 的文件。&#10;!*研究报告*.* 表示排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示排除文件名包含“研究报告”的 pdf 文件。">
+                        <div v-if="filteredItems.length" class="dropdown-list"  title="✔ Include 包含 此特征&#9;✘ Exclude 排除 此特征&#10;&#10;点击复选框/Ctrl+Space切换&#10;&#10;上下方向键选中，鼠标点击/Enter确认">
+
+                    <button class="btn btn-primary  pt-2 ht-30" @click="openFolderDialog" title="点击选择搜索根路径">添加</button>
                             <div v-for="(item, index) in filteredItems" :key="index" @click="selectItem(item)" :class="{'selected': index === selectedIndex}" class="dropdown-item">
                                 <span class="push-button" @click.stop="togglePush(item)" :style="{ color: item.include ? 'green' : 'red' }" >{{ item.include ? '✔' : '✘' }}</span>
                                 <span class="list-type">{{ item.type }}</span>
@@ -31,29 +24,27 @@
                         </div>
                   </div>
                     <!--  新加End  ✘✔━—㊀㊉＋－-->
-
-                        <button class="btn btn-primary mt-1 pt-1 ht-45" @click="clearFilePattern" title="点击清除">C</button>
-                    
+                        <button class="btn btn-secondary mt-2 pt-1 ht-45" @click="clearFilePattern" title="点击清除">C</button>
                 </div>
             </div>
             <div class="col-6 ">
                 <div class="input-group mb-0 mt-0 ">
-                    <!--    <span class="input-group-text dark-mode">搜索模式</span> -->
-                    <div class="border-light  mt-1">
-                        <div class="form-check mt-0" style="margin-right: 0.6rem;"
-                            title="勾选此项，启用正则表达式模式。&#10;&#10;勾选后，右侧框输入内容将被视为正则表达式">
-                            <label class="form-check-label mt-0 pt-0 ht-45" for="regex-mode">Regex </label>
-                            <input type="checkbox" class="form-check-input mt-2" id="regex-mode" v-model="regexMode" />
+                    <div class="border-light  mt-2">
+                        <div class="form-switch d-flex flex-column align-items-end mt-1" style="margin-right: 0.6rem;margin-left:1px;padding-left:1px;"
+                            title="勾选此项，启用正则表达式模式。&#9;&#10;勾选后，右侧框输入内容将被视为正则表达式">
+                            <input type="checkbox" class="form-check-input mt-3" role="switch" id="regex-mode" v-model="regexMode" />
+                            <label class="form-check-label d-block text-start mt-1 pt-0 ht-45" for="regex-mode">Regex </label>
                         </div>
                     </div>
-                    <input class="form-control dark-mode  mt-1 ht-45" v-model="searchPattern" @keydown="handleSearchKeydown" placeholder="全文搜索关键字  如：市场调研 销售数据 业绩喜人"
+                    <!--    <span class="input-group-text dark-mode">搜索模式</span> -->
+                    <input class="form-control dark-mode  mt-1 ht-45 search-input" v-model="searchPattern" @keydown="handleSearchKeydown" placeholder="全文搜索关键字  如：市场调研 销售数据 人工智能"
                         title="全文搜索关键字&#10;&#10;1. 支持正则表达式。&#10;2. 普通模式：即单关键字搜索，最常用！&#10;3. 管道模式：空格分隔多关键字，将漏斗式逐关键字过滤，较耗时。&#10;&#10;注意：&#10;管道模式下，低频关键字靠前放有利于缩短搜索时间&#10;管道模式下，仅显示最后关键字的一次命中结果&#10;&#10;正则说明：&#10;1. 全文搜索时，支持高级正则模式先行和后行断言，如：(?=.*K1)(?=.*K2)(?=.*K3)&emsp; 表示字符串同时含K1、K2、K3&#10;2. 仅搜文件名 时，默认为普通正则模式，不必勾选Regex" />
-                    <button class="btn btn-primary mt-1 pt-1 ht-45" @click="runCommand"
+                    <button class="btn btn-success mt-1 pt-1 ht-45 search-button" @click="runCommand"
                         title="为缩短搜索时间，程序会多线程并发搜索。&#10;因此，CPU占用率很高是正常现象！">搜索</button>
                 </div>
             </div>
         </div>
-        <div class="row" style="margin-left: 0.2rem;">
+        <div class="row" style="margin-left: 0.2rem;margin-top:3px;">
 
             <div class="form-check mt-0" style="width: fit-content;" title="只搜索文件名，不搜索内容。">
                 <label class="form-check-label mt-0 pt-0 ht-45" for="search-file-name">只搜文件名</label>
@@ -63,31 +54,35 @@
                 <label class="form-check-label mt-0 pt-0 ht-45" for="search-hidden">搜隐藏文件</label>
                 <input type="checkbox" class="form-check-input mt-2" id="search-hidden" v-model="searchHidden" />
             </div>
-            <div class="form-check mt-0" style="width: fit-content;" title="把二进制文件作为文本搜索&#10;&#10;速度较慢，输入内容可能包含非法字符。">
-                <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">把二进制当作文本</label>
+            <div class="form-check mt-0" style="width: fit-content;" title="把二进制文件作为文本搜索&#10;&#10;速度较慢，输出内容可能包含非法字符。">
+                <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">搜二进制文件</label>
                 <input type="checkbox" class="form-check-input mt-2" id="search-binary" v-model="searchBinary" />
             </div>
             <div class="form-check mt-0" style="width: fit-content;" title="排除不常用且耗时的图片、压缩文件、数据库、视频文件">
-                <label class="form-check-label mt-0 pt-0 ht-45" for="">排除不常用耗时文件</label>
+                <label class="form-check-label mt-0 pt-0 ht-45" for="">排除冷门耗时文件</label>
                 <input type="checkbox" class="form-check-input mt-2"  v-model="excludeNotCommon" />
             </div>
 
-            <div class="form-check mt-0 " style="width: fit-content;display: inline-flex;"
-                title="单个文件中出现的关键字次数达到[最大匹配次数]后，程序将不再搜索此文件，以提高效率。&#10;&#10;0 表示无限制。&#10;过大可能会导致搜索时间过长。">
-                <label class="form-check-label mt-0 pt-0 ht-45" for="max-count" style="width: fit-content;">最大匹配次数:</label>
-                <input class="form-control dark-mode mt-1 ht-30" id="max-count" v-model="maxCount"
-                    style="width: 80px;" />
-            </div>
-
-            <div class="form-check mt-0  " style="width: fit-content;display: inline-flex;"
-                title="目录遍历深度&#10;&#10;1-表示当前文件夹&#10;2-表示当前文件夹及子文件夹&#10;3-表示当前文件夹及子文件夹及子文件夹...&#10;&#10;深度越大，耗时越长">
-                <label class="form-check-label mt-0 pt-0 ht-45" for="max-depth" style="width: fit-content;">目录遍历深度:</label>
-                <input class="form-control dark-mode mt-1 ht-30" id="max-depth" v-model="maxDepth"
-                    style="width: 80px;" />
-            </div>
             <div style="display: inline-flex;position: absolute;bottom: 0;gap: 0.5rem;">
-                <label for="">执行状态：</label><label class="text-success" for=""><b>{{ cmdStatus }}</b></label>
+                <label for="">执行状态：</label><label :class="['text-success', isDone ? '':'blink' ]" for=""><b>{{ cmdStatus }}</b></label>
                 &ensp;&ensp;<label>搜索结果：{{ output.length }} 条</label>
+            </div>
+            <div style="display: flex;justify-content:flex-end;align-items:center; gap: 0.5rem;padding-right: 15px;" class="parent-container">
+                <div class="input-group mt-0 " style="width: fit-content;display: inline-flex;padding-left:0px;"
+                    title="单个文件中出现的关键字次数达到[最大匹配次数]后，程序将不再搜索此文件，以提高效率。&#10;&#10;0 表示无限制。&#10;过大可能会导致搜索时间过长。">
+                <!--    <label class="form-check-label mt-0 pt-0 ht-45" for="max-count" style="width: fit-content;">最大匹配次数：</label>-->
+                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6" style="background:#333;padding-right:6px;padding-left:0px;">最大匹配次数</span>
+                    <input class="form-control dark-mode mt-0 ht-30" id="max-count" v-model="maxCount"
+                        style="width: 80px;" />
+                </div>
+
+                <div class=" input-group mt-0  " style="width: fit-content;display: inline-flex;padding-left:0px;"
+                    title="目录遍历深度&#10;&#10;1-表示当前文件夹&#10;2-表示当前文件夹及子文件夹&#10;3-表示当前文件夹及子文件夹及子文件夹...&#10;&#10;深度越大，耗时越长">
+                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6" style="background:#333;padding-right:6px;padding-left:0px;">目录遍历深度</span>
+                    <input class="form-control dark-mode mt-0 ht-30" id="max-depth" v-model="maxDepth"
+                        style="width: 80px;" />
+                </div>
+
             </div>
         </div>
     </div>
@@ -122,23 +117,32 @@
                 </tr>
             </tbody>
         </table>
-        <!--
-        <ol>
-            <li class="text-start fs-6 " v-for="line in output" :key="line.file" :title="line.content">
-                <a class="no-underline " href="#" @click.prevent="openFile(line.file)" v-if="dispHitCount && line.sn!== ''" >
-                    [ {{ line.sn }} ] {{ line.file }} </a>
-                <a class="no-underline " href="#" @click.prevent="openFile(line.file)" v-else > {{ line.file }} </a>
-            </li>
-        </ol>
-        -->
-    </div>
+            </div>
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
-            <span>Version:1.0.0 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
+            <span>Version:1.0.2 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
         </div>
         </div>
     </div>
+    <div id="alertBox" class="custom-alert" >
+        <span style=" font-weight: bold;" class="fs-5 text-warning ">【文件类别】未指定</span><br><br>
+      将搜索所有类别的文件，速度较慢！ 请耐心等待...<br><br>
+      <span class="red-text">如需终止漫长搜索，请关闭本程序后重开。</span>
+      
+      <br><br>
+      <button @click="closeCustomAlert" class="btn btn-primary">确定</button>
+    
+    </div>
+    <div id="alertRuningBox" class="custom-alert" >
+      <span style="font-weight: bold;" class="fs-5 text-warning ">{{ isDone ? '搜索完成！':'当前搜索未结束！'}}</span><br>
+      <span style="font-weight: bold;" class="fs-5 text-warning">{{ isDone ? '':'请耐心等待...'}}</span><br><br>
+      {{ isDone ? '请点击确定':'如欲强行终止，可关闭本程序后重新打开。'}}
+      <br><br>
+      <button @click="closeRuningAlert" class="btn btn-primary">确定</button>
+    
+    </div>
+
 </template>
 
 <script>
@@ -154,6 +158,15 @@ function scrollToTop() {
     getById("outputTable").scrollTop = 0;
 }
 
+function isPatternNotOK(pattern) {
+  // 非汉字字符过短检测，短于3字符的返回true。汉字字符不做检测。
+  let re=/^[ ]*[\x00-\xFF]{1,3}([ ]|$)/;
+  console.log(pattern);
+  console.log(re);
+  console.log(re.test(pattern));
+  return re.test(pattern);
+
+}
 export default {
     methods: {
         openFile(filePath) {
@@ -164,7 +177,7 @@ export default {
             console.log(folderPath);
             invoke('goto_folder', { folderPath: folderPath });
         },
-  
+        
     },
     setup() {
         const searchPattern = ref(''); // 搜索模式
@@ -176,13 +189,14 @@ export default {
         const preFile = ref('');// 记录上一个搜到的文件名，用于去重
         const cmdStatus = ref(''); // 命令状态
         const searchFilename = ref(false); // 是否只搜索文件名
-        const maxCount = ref(500); // 单个文件最大匹配次数
+        const maxCount = ref(50); // 单个文件最大匹配次数
         const OS = ref(''); // 操作系统
         const searchHidden = ref(false); // 是否搜索隐藏文件
         const maxDepth = ref(100); // 目录遍历深度
         const searchBinary = ref(false); // 是否把二进制文件作为文本搜索
         const excludeNotCommon=ref(true); // 是否排除不常用且耗时的图片、压缩文件、数据库、视频文件
         ////begin 新加
+        const isDone=ref(true); //搜索是否执行结束
         const items= ref([
             { include: true, type: 'ada', content: '*.adb *.ads' },
             { include: true, type: 'agda', content: '*.agda *.lagda' },
@@ -447,8 +461,26 @@ export default {
         };
         ////end 新加
 
+        const showCustomAlert= ()=> {
+          getById("alertBox").style.display="block";
+          console.log(getById("alertBox").style.display);
+        };
 
+        const closeCustomAlert=()=>{
+          getById("alertBox").style.display="none";
+          console.log(getById("alertBox").style.display);
+          console.log("执行隐藏对话框");
+        };
 
+        const showRuningAlert=()=>{
+          getById("alertRuningBox").style.display="block";
+
+        };
+        const closeRuningAlert=()=>{
+          getById("alertRuningBox").style.display="none";
+        };
+
+         
         const sortOutputByHitCount = () => {
             let hc = getById("sort-by-hit-count");
             let sf = getById("sort-by-file");
@@ -492,6 +524,17 @@ export default {
             scrollToTop();
         };
         const runCommand = () => {
+
+            if (!isDone.value) {
+              //alert("上一搜索未结束...\n请耐心等待。\n\n如欲强制终止，请关闭本程序后重新打开。");
+              showRuningAlert();
+
+              return;
+            }
+            if(isPatternNotOK(searchPattern.value) && !regexMode.value){
+              alert("搜索关键字过短！\n英文字符每关键字至少4个字符，或用Regex模式，汉字不限。");
+              return;
+            } 
             if (searchPattern.value === '' && !searchFilename.value) {    //if search pattern is empty, show error message and return
                 alert('搜索模式不能为空');
                 return;
@@ -516,17 +559,21 @@ export default {
                 alert('目录遍历深度必须正整数');
                 return;
             }
+          
             if(filenamePattern.value.trim() === '') {
-                alert('【文件类别】未指定，将搜索所有类别的文件，速度较慢！\n\n如需终止搜索，请关闭黑色弹窗或本程序。\n\n请耐心等待！');
-                
+                //alert('【文件类别】未指定，将搜索所有类别的文件，速度较慢！\n\n如需终止搜索，请关闭本程序。\n\n请耐心等待！');
+                showCustomAlert();
             }
+         
+            isDone.value=false;
+
 
             let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
             let ptrn = t.filter(item => item.trim() !== '');//remove empty string
 
-            if (ptrn.length > 1 && regexMode.value === false) {//if search pattern has more than two keywords, show error message and return
-                alert('搜索关键词大于1个，将启用管道模式，可能比较耗时!\n\n请耐心等待......');
-            }
+            //if (ptrn.length > 1 && regexMode.value === false) {
+            //    alert('搜索关键词大于1个，将启用管道模式，可能比较耗时!\n\n请耐心等待......');
+            //}
             output.value = [];//clear output before running new command
             // reset
             getById("sort-by-file").innerText = "文件-";
@@ -537,7 +584,7 @@ export default {
             }else{
                 cmdStatus.value = "搜索中...";
             }
-            invoke('run_rg_command', { searchPattern: searchPattern.value.trim(), searchPath: searchPath.value, filenamePattern: filenamePattern.value, regexMode: regexMode.value, dispHitCount: dispHitCount.value, searchFilename: searchFilename.value, maxCount: Number(maxCount.value) , searchHidden: searchHidden.value , maxDepth: Number(maxDepth.value) , searchBinary: searchBinary.value ,excludeNotCommon: excludeNotCommon.value });
+            invoke('run_rg_command', { searchPattern: searchPattern.value, searchPath: searchPath.value, filenamePattern: filenamePattern.value, regexMode: regexMode.value, dispHitCount: dispHitCount.value, searchFilename: searchFilename.value, maxCount: Number(maxCount.value) , searchHidden: searchHidden.value , maxDepth: Number(maxDepth.value) , searchBinary: searchBinary.value ,excludeNotCommon: excludeNotCommon.value });
         };
         const openFolderDialog = async () => {
             try {
@@ -606,12 +653,12 @@ export default {
                 let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
                 let ptrn = t.filter(item => item.trim() !== '');//remove empty string
 
-                if (ptrn.length > 1 && regexMode.value === false) {//if search pattern has more than two keywords, show error message and return
-                    
+                if (ptrn.length > 1 && regexMode.value === false) {                    
                     cmdStatus.value +="->("+output.value.length + ")->完成" ;
                 }else{
                     cmdStatus.value = event.payload;
                 }
+                isDone.value=true;
                 console.log(event.payload);
             });
 
@@ -629,6 +676,10 @@ export default {
                 alert(event.payload);
                 console.log(event.payload);
                 //alert(OS);
+            });
+            listen('error', event => {
+                alert(event.payload);
+                console.log(event.payload);
             });
             //begin 新加
             document.addEventListener('click', handleDropdownClick);
@@ -671,14 +722,18 @@ export default {
             clearFilePattern,
             handleSearchKeydown,
             excludeNotCommon,
+            closeCustomAlert,
+            closeRuningAlert,
             //end 新加
-            regexMode
+            regexMode,
+            isDone
         };
     }
 
 };
 
 </script>
+
 <style scoped>
 /*dropdown 开始*/
 
@@ -743,7 +798,7 @@ export default {
     top: 2px;
     left: 0;
     width: 100%;
-    height: 200px;
+    height: 160px;/* 200px */
     background-color: #333;
     color: white;
     text-align: center;
@@ -765,12 +820,12 @@ export default {
 }
 
 .content {
-    margin-top: 202px;
+    margin-top: 162px;/* 202px */
     margin-left: 0px;
     padding-top: 0px;
     padding-left: 15px;
     padding-right: 15px;
-    height: calc(100% - 230px);
+    height: calc(100% - 190px);/* 230px */
     overflow-y: auto;
     background-color: #333;
     color: white;
@@ -785,18 +840,26 @@ html {
     flex-direction: column;
 }
 .icon {
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     vertical-align: middle;
+     
 
 }
 
 .ht-45 {
-    height: 45px;
+    height: 38px;
 }
-
+.ht-43 {
+    height: 36px;
+}
 .ht-30 {
     height: 30px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px; /* 调整字体大小以适应按钮尺寸 */
 }
 
 a {
@@ -848,5 +911,88 @@ a:hover {
     /* 深色背景 #343a40 */
     color: white;
     /* 深色模式下的文字颜色 */
+}
+
+.custom-alert {
+  display: none; 
+  background:#333; 
+  position: fixed; 
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%,-50%); 
+  padding: 20px; 
+  border: 2px solid #ccc; 
+  box-shadow: 0 0 10px rgba(0,0,0,0.2); 
+  text-align:center; 
+}
+
+.red-text {
+  color: red;
+  font-weight: bold;
+}
+
+.blink {
+  animation: blink 1s infinite;
+}
+@keyframes blink {
+  0% { opacity: 1;}
+  50% { opacity: 0;}
+  100% { opacity:1; }
+}
+/* 凸显搜索输入框 */
+.search-input {
+  width: 60%;
+  height: 80px;
+  font-size: 16px;
+  padding: 8px 12px;
+  border: 2px solid #4CAF50; /* 亮蓝色边框 4A90E2*/
+  border-radius: 6px;
+  background-color: #2A2D32; /* 深灰色背景，更符合暗色主题 */
+  color: #FFFFFF; /* 文本颜色 */
+  transition: all 0.3s ease-in-out;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5); /* 让占位符更易读 */
+}
+
+.search-input:focus {
+  border-color: #1976D2;
+  background-color: #3A3F44; /* 聚焦时变浅一点，形成交互感 */
+  box-shadow: 0 0 8px rgba(74, 144, 226, 0.6); /* 添加蓝色发光效果 */
+  outline: none;
+}
+
+/* 3. 搜索按钮的优化 */
+.search-button {
+  height: 80px;
+  padding: 0 16px;
+  font-size: 16px;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-left: 10px; /* 让按钮与输入框有适当间距 */
+  transition: background 0.3s;
+}
+
+.search-button:hover {
+  background-color: #005BBB; /* 悬停时颜色变深 */
+}
+
+/* 4. 让输入框自动获得焦点时有动画（可选） */
+@keyframes input-focus-animation {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0px rgba(33, 150, 243, 0);
+  }
+  100% {
+    transform: scale(1.02);
+    box-shadow: 0 0 8px rgba(33, 150, 243, 0.6);
+  }
+}
+
+.search-input:focus {
+  animation: input-focus-animation 0.2s ease-in-out;
 }
 </style>
