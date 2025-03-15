@@ -7,6 +7,7 @@ use regex::Regex;
 use ripgrepa_gui::myutils::*;
 use std::env::consts::OS;
 use std::io::{self, BufRead, Read};
+use tauri::window;
 //use tauri::{window, EventLoopMessage};
 //use std::os;
 
@@ -191,7 +192,8 @@ fn run_rg_command(
     rga_args.push("--no-messages".to_string());
 
     // 路径中可能有空格，需要转义
-    rga_args.push(searchPath.replace(" ", "\\ "));
+    rga_args.push(searchPath);
+    //rga_args.push(searchPath.replace(" ", "\\ "));
 
     //rga_str += searchPath.replace(" ", "\\ ").as_str(); // 路径中可能有空格，需要转义
     //替换单引号，windows不需要单引号，linux需要
@@ -231,21 +233,22 @@ fn run_rg_command(
                 .expect("Failed to send completed message");
         }
         #[cfg(not(windows))]
-        let mut child = Command::new("rga")
-            //.args(split_args(&rga_str))
+        let child_result = Command::new("rga")
             .args(rga_args)
             .stdout(Stdio::piped())
-            .spawn()
-            .expect("Failed to start rga command");
+            .stderr(Stdio::piped())
+            .spawn();
+        //.expect("Failed to start rga command");
 
         #[cfg(windows)]
-        let mut child = Command::new("rga")
+        let child_result = Command::new("rga.exe")
             .args(rga_args)
             // windows下需要设置不显示命令行窗口
             .creation_flags(0x08000000) // CREATE_NO_WINDOW
             .stdout(Stdio::piped())
-            .spawn()
-            .expect("Failed to start rga command");
+            .stderr(Stdio::piped())
+            .spawn();
+        //.expect("Failed to start rga command");
 
         // if !output.status.success() {
         //     window
@@ -269,27 +272,34 @@ fn run_rg_command(
         //         .expect("Failed to start rga command")
         // };
 
-        // 保存 stdout
-        //let stdout_t = child.stdout.take().expect("Failed to take stdout");
-        // 将子进程放入全局变量中
-        // unsafe {
-        //     if CHILD_PROCESS.is_some() {
-        //         // 如果已经有一个子进程在运行，先终止它
-        //         if let Some(previous_child_arc) = CHILD_PROCESS.take() {
-        //             // previous_child_arc现在是一个独立的所有者，可以安全地加锁并使用
-        //             let mut previous_child = previous_child_arc.lock().unwrap();
-        //             if let Err(e) = previous_child.kill() {
-        //                 println!("Failed to kill previous child process: {}", e);
-        //             }
-        //         }
-        //     }
-        //     CHILD_PROCESS = Some(Arc::new(Mutex::new(child)));
-        // }
-        // let child_clone = unsafe { CHILD_PROCESS.as_ref().unwrap().clone() }; // 克隆 Arc<Mutex<Child>> 引用
-        // let stdout = {
-        //     let mut child = child_clone.lock().unwrap();
-        //     child.stdout.take().expect("Failed to take stdout")
-        // };
+        let mut child = match child_result {
+            Ok(child) => child,
+            Err(e) => {
+                window
+                    .emit("error", format!("执行错误: {}", e).as_str())
+                    .unwrap();
+                return;
+            }
+        };
+
+        match child.stderr.take() {
+            Some(stderr) => {
+                let reader = io::BufReader::new(stderr);
+                let mut lines = String::new();
+                for line in reader.lines() {
+                    match line {
+                        Ok(line) => {
+                            println!("Error: {}", line);
+                            lines.push_str(line.as_str());
+                            lines.push('\n');
+                        }
+                        Err(err) => eprintln!("Error reading line: {}", err),
+                    }
+                }
+                window.emit("error", lines.as_str()).unwrap();
+            }
+            None => {}
+        }
 
         println!("Child process started.");
         let mut file_list: Vec<String> = Vec::new();
@@ -347,12 +357,6 @@ fn run_rg_command(
                 }
             }
         }
-
-        // 克隆 CHILD_PROCESS 的 Arc
-        // let child_clone = unsafe { CHILD_PROCESS.as_ref().unwrap().clone() };
-        // // 从 Arc 中借用 child
-        // let mut child_ref = child_clone.lock().unwrap();
-        // let child: &mut Child = &mut *child_ref;
 
         // 如果是空格分隔的多关键字，则启用pip_search
         if keywords.len() > 1 && !regexMode && file_list.len() > 0 {

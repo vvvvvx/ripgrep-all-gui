@@ -12,10 +12,10 @@
                     <span class="input-group-text dark-mode mt-2 ht-45 d-flex">文件类别</span>
                     <!--新加Begin-->
                     <div class="form-control dropdown mt-2 ht-45  flex-column" style="padding: 0%;" @click="handleDropdownClick"> 
-                        <input  class=" dark-mode mt-0  w-100 ht-43" ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="默认空，搜所有类别，较慢。可输：*.zip  *.pdf  ==>全文关键字在右框输入" title="文件类别，支持通配符。&#10;&#10;用空格分隔多个类别，-默认为空，搜索所有文件，速度慢。&#10;&#10;例如：&#10;*.docx *.pdf  表示搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*.*  表示搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示排除扩展名为 txt 的文件。&#10;!*研究报告*.* 表示排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示排除文件名包含“研究报告”的 pdf 文件。">
+                        <input  class=" dark-mode mt-0  w-100 ht-43" ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="默认空，搜所有类别，较慢。可输：*.zip  *.pdf  ==>全文关键字在右框输入" title="文件类别，支持通配符。&#10;将只搜索指定类别的所有文件&#10;&#10;用空格分隔多个类别。默认为空，即搜索所有类别，速度较慢。&#10;不建议留空，明确文件类别将成倍提高搜索速度。&#10;&#10;例如：&#10;*.docx *.pdf  表示只搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*.*  表示只搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示只搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示搜索会排除扩展名为 txt 的文件。&#10;!*研究报告*.* 表示搜索会排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示搜索会排除文件名包含“研究报告”的 pdf 文件。">
                         <div v-if="filteredItems.length" class="dropdown-list"  title="✔ Include 包含 此特征&#9;✘ Exclude 排除 此特征&#10;&#10;点击复选框/Ctrl+Space切换&#10;&#10;上下方向键选中，鼠标点击/Enter确认">
 
-                    <button class="btn btn-primary  pt-2 ht-30" @click="openFolderDialog" title="点击选择搜索根路径">添加</button>
+                    <!---<button class="btn btn-primary  pt-2 ht-30" @click="openFolderDialog" title="点击选择搜索根路径">添加</button> -->
                             <div v-for="(item, index) in filteredItems" :key="index" @click="selectItem(item)" :class="{'selected': index === selectedIndex}" class="dropdown-item">
                                 <span class="push-button" @click.stop="togglePush(item)" :style="{ color: item.include ? 'green' : 'red' }" >{{ item.include ? '✔' : '✘' }}</span>
                                 <span class="list-type">{{ item.type }}</span>
@@ -24,7 +24,7 @@
                         </div>
                   </div>
                     <!--  新加End  ✘✔━—㊀㊉＋－-->
-                        <button class="btn btn-secondary mt-2 pt-1 ht-45" @click="clearFilePattern" title="点击清除">C</button>
+                        <button class="btn btn-secondary mt-2 pt-1 ht-45" @click="clearFilePattern" title="点击清除文件类别">C</button>
                 </div>
             </div>
             <div class="col-6 ">
@@ -131,7 +131,7 @@
       <span class="red-text">如需终止漫长搜索，请关闭本程序后重开。</span>
       
       <br><br>
-      <button @click="closeCustomAlert" class="btn btn-primary">确定</button>
+      <button @click="closeCustomAlert" id="closeAlertBtn" class="btn btn-primary">确定</button>
     
     </div>
     <div id="alertRuningBox" class="custom-alert" >
@@ -139,7 +139,7 @@
       <span style="font-weight: bold;" class="fs-5 text-warning">{{ isDone ? '':'请耐心等待...'}}</span><br><br>
       {{ isDone ? '请点击确定':'如欲强行终止，可关闭本程序后重新打开。'}}
       <br><br>
-      <button @click="closeRuningAlert" class="btn btn-primary">确定</button>
+      <button @click="closeRuningAlert" id="closeRuningAlertBtn" class="btn btn-primary">确定</button>
     
     </div>
 
@@ -414,6 +414,7 @@ export default {
         };
         const handleSearchKeydown=(event)=> {
             if (event.key === 'Enter') {
+                event.preventDefault();
                 runCommand();
             }
         };
@@ -425,9 +426,15 @@ export default {
                 event.preventDefault();
                 selectedIndex.value = Math.max(selectedIndex.value - 1, 0);
             } else if (event.key === 'Enter') {
+                console.log("Keydown Enter pressed");
+                event.preventDefault();
                 if (selectedIndex.value >= 0) {
                     selectItem(filteredItems.value[selectedIndex.value]);
                     filteredItems.value = [];
+                }
+                if(filenamePattern.value.trim().length >0 ){
+                    console.log("Keydown Enter:"+filenamePattern.value);
+                    runCommand();
                 }
             } else if (event.ctrlKey && event.key === ' '){
                 if (selectedIndex.value >= 0) {
@@ -463,6 +470,7 @@ export default {
 
         const showCustomAlert= ()=> {
           getById("alertBox").style.display="block";
+          getById("closeAlertBtn").focus();
           console.log(getById("alertBox").style.display);
         };
 
@@ -474,7 +482,7 @@ export default {
 
         const showRuningAlert=()=>{
           getById("alertRuningBox").style.display="block";
-
+          getById("closeRuningAlertBtn").focus();
         };
         const closeRuningAlert=()=>{
           getById("alertRuningBox").style.display="none";
@@ -527,6 +535,7 @@ export default {
 
             if (!isDone.value) {
               //alert("上一搜索未结束...\n请耐心等待。\n\n如欲强制终止，请关闭本程序后重新打开。");
+              console.log("runCommand:isDone:",isDone.value);
               showRuningAlert();
 
               return;
@@ -849,6 +858,10 @@ html {
 
 .ht-45 {
     height: 38px;
+}
+.ht-44{
+
+    height: 37px;
 }
 .ht-43 {
     height: 36px;
