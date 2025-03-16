@@ -295,6 +295,8 @@ fn run_rg_command(
         if let Some(stdout) = child.stdout.take() {
             let reader = io::BufReader::new(stdout);
             let mut pre_path = String::new();
+            let mut pre_content = String::new();
+            let mut pip_content_count = 0;
 
             let mut record = Record {
                 hit_count: 0,
@@ -303,7 +305,7 @@ fn run_rg_command(
                 created_at: String::new(),
                 modified_at: String::new(),
             };
-            let mut pip_content_count = 0;
+            let mut first_line = true;
             for line in reader.lines() {
                 match line {
                     Ok(line) => {
@@ -348,32 +350,41 @@ fn run_rg_command(
                             //     continue;
                             // }
                             let (path, content) = split_path_content(line.as_str());
+                            if first_line {
+                                pre_path = path.clone();
+                                pre_content = content.clone() + "\n";
+                                pip_content_count = 1;
+                                first_line = false;
+                            }
                             if path != pre_path {
-                                //let mut file_list = file_list.lock().unwrap();
-
-                                //创建传递给pip_search的file_list
+                                //把新文件加入file_list
                                 file_list.push(FileRecord {
-                                    file_path: pre_path.clone(),
+                                    file_path: pre_path,
                                     content: "————————————————【".to_string()
                                         + keywords[0].as_str()
                                         + "】—"
                                         + pip_content_count.to_string().as_str()
-                                        + "———————————————\n"
-                                        + content.as_str()
+                                        + "————————————————\n"
+                                        + pre_content.as_str()
                                         + "\n",
                                 });
-                                // 追加了一次命中，重置pip_content_count
+                                // 追加了一次命中，重置变量
                                 pip_content_count = 1;
                                 pre_path = path;
+                                pre_content = content.clone() + "\n";
                             } else {
                                 // 同一文件，最多追加3个命中内容
-                                let len = file_list.len();
+                                // let len = file_list.len();
+                                // if pip_content_count < PIP_SEARCH_MAX_HITS {
+                                //     file_list[len - 1].content = file_list[len - 1].content.clone()
+                                //         + content.as_str()
+                                //         + "\n";
+                                // }
                                 if pip_content_count < PIP_SEARCH_MAX_HITS {
-                                    file_list[len - 1].content = file_list[len - 1].content.clone()
-                                        + content.as_str()
-                                        + "\n";
+                                    pre_content =
+                                        pre_content.clone() + content.clone().as_str() + "\n";
                                 }
-                                pip_content_count += 1;
+                                pip_content_count = pip_content_count + 1;
                             }
                         } else {
                             let (path, content) = split_path_content(line.as_str());
@@ -539,7 +550,7 @@ fn pip_search(
                     match line_result {
                         Ok(line) => {
                             total_lines += 1;
-                            if total_lines < PIP_SEARCH_MAX_HITS {
+                            if total_lines <= PIP_SEARCH_MAX_HITS {
                                 top3_lines.push(line);
                             }
                         }

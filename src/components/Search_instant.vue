@@ -692,50 +692,7 @@ export default {
                 output.value.push({ hitCount: record[0], file: record[1],created_at:record[2], modified_at:record[3], content: record[4] });
             });
 
-            // listen('rg-output-bak', event => {
-
-            //     if (searchFilename.value) {
-
-            //         output.value.push({ file: event.payload, content: '' });
-            //         return;
-            //     }
-            //     // 找到第一个冒号的位置
-
-            //     let firstIndex = event.payload.indexOf(':');
-            //     // 如果是windows系统，冒号可能出现两次，所以需要找到第二个冒号的位置
-            //     if (OS.value === 'windows') {
-            //         firstIndex = event.payload.indexOf(':', firstIndex + 1);
-            //     }
-
-            //     // 如果找不到冒号，返回原始字符串和空字符串
-            //     if (firstIndex === -1) {
-            //         output.value.push({ file: event.payload, content: '' });
-            //         return;
-            //     }
-            //     // 使用slice方法分割字符串
-            //     let firstPart = event.payload.slice(0, firstIndex);
-            //     let secondPart = event.payload.slice(firstIndex + 1);
-            //     if (secondPart.length > 1000) {
-            //         secondPart = secondPart.slice(0, 1000) + '...';
-            //     }
-            //     // 非显示命中次数模式，文件名去重。把命中字符串content和前次命中字符串合并
-
-            //     if (firstPart === preFile.value) {
-            //         // 去重
-            //         output.value[output.value.length - 1].hitCount += 1;
-            //         // 命中次数大于20时，显示前20个命中内容,其他忽略
-            //         if (output.value[output.value.length - 1].hitCount < 20) {
-            //             output.value[output.value.length - 1].content += "\n" + secondPart;
-            //         }
-            //         if (output.value[output.value.length - 1].hitCount === 20) {
-            //             output.value[output.value.length - 1].content += "\n...";
-            //         }
-            //         return;
-            //     }
-            //     // 更改preFile为当前文件名
-            //     preFile.value = firstPart;
-            //     output.value.push({ hitCount: 1, file: firstPart, content: secondPart });
-            // });
+           
             listen('completed', event => {
                 let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
                 let ptrn = t.filter(item => item.trim() !== '');//remove empty string
