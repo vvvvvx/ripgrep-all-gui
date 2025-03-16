@@ -31,6 +31,8 @@ use std::process::{Command, ExitStatus};
 //static mut CHILD_PROCESS: Option<Arc<Mutex<Child>>> = None;
 
 const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2026, 12, 30);
+const PIP_SEARCH_MAX_HITS: usize = 3; // pip search每个关键字会记录的最大结果数
+const MAX_CONTENT_SIZE: usize = 3000; // 命中记录Content字段最大长度
 
 #[tauri::command]
 fn goto_folder(folderPath: &str) {
@@ -287,27 +289,6 @@ fn run_rg_command(
         //         .expect("Failed to start rga command")
         // };
 
-        // let mut child = match child_result {
-        //     Ok(child) => child,
-        //     Err(e) => {
-        //         window
-        //             .emit("error", format!("执行错误: {}", e).as_str())
-        //             .unwrap();
-        //         return;
-        //     }
-        // };
-        //let status = child.wait();
-        // let status = match status {
-        //     Ok(status) => status,
-        //     Err(e) => {
-        //         println!("Error waiting for child process: {}", e);
-        //         window
-        //             .emit("completed", Some("执行结束：子进程错误!".to_string()))
-        //             .unwrap();
-        //         return;
-        //     }
-        // };
-
         println!("Child process started.");
         let mut file_list: Vec<FileRecord> = Vec::new();
 
@@ -322,7 +303,7 @@ fn run_rg_command(
                 created_at: String::new(),
                 modified_at: String::new(),
             };
-
+            let mut pip_content_count = 0;
             for line in reader.lines() {
                 match line {
                     Ok(line) => {
@@ -355,10 +336,6 @@ fn run_rg_command(
                         }
                         // 如果是空格分隔的多关键字，则启用pip_search
                         if keywords.len() > 1 && !regexMode {
-                            // 获取文件路径
-                            // let pathes: Vec<&str> = line.split(':').collect();
-                            // let mut path = String::new();
-
                             // if pathes.len() == 1 {
                             //     path = pathes[0].to_string();
                             // } else if pathes.len() >= 2 {
@@ -376,14 +353,27 @@ fn run_rg_command(
 
                                 //创建传递给pip_search的file_list
                                 file_list.push(FileRecord {
-                                    file_path: path.clone(),
-                                    content: "——————————————————[".to_string()
+                                    file_path: pre_path.clone(),
+                                    content: "————————————————【".to_string()
                                         + keywords[0].as_str()
-                                        + "]——————————————————\n"
+                                        + "】—"
+                                        + pip_content_count.to_string().as_str()
+                                        + "———————————————\n"
                                         + content.as_str()
                                         + "\n",
                                 });
+                                // 追加了一次命中，重置pip_content_count
+                                pip_content_count = 1;
                                 pre_path = path;
+                            } else {
+                                // 同一文件，最多追加3个命中内容
+                                let len = file_list.len();
+                                if pip_content_count < PIP_SEARCH_MAX_HITS {
+                                    file_list[len - 1].content = file_list[len - 1].content.clone()
+                                        + content.as_str()
+                                        + "\n";
+                                }
+                                pip_content_count += 1;
                             }
                         } else {
                             let (path, content) = split_path_content(line.as_str());
@@ -416,7 +406,7 @@ fn run_rg_command(
                                     created_at: String::new(),
                                     modified_at: String::new(),
                                 };
-                                record.hit_count += 1;
+                                record.hit_count = record.hit_count + 1;
                                 record.path = path.clone();
                                 record.content = content + "\n";
 
@@ -428,9 +418,9 @@ fn run_rg_command(
                                 pre_path = path.clone();
                             } else {
                                 // 同一文件，追加内容
-                                record.hit_count += 1;
+                                record.hit_count = record.hit_count + 1;
                                 // 限制content长度，防止前端卡死
-                                if record.content.len() < 3000 {
+                                if record.content.len() < MAX_CONTENT_SIZE {
                                     record.content = record.content + content.as_str() + "\n";
                                 }
                             }
@@ -457,7 +447,7 @@ fn run_rg_command(
                     keywords.to_vec(),
                     file_list.to_vec(),
                     child,
-                    "-M 1000 -m 5".to_string(),
+                    "-M 1000 -m ".to_string() + maxCount.to_string().as_str(),
                 );
                 println!("Command finished with status: {}", status.code().unwrap());
                 emit_completed_signal(window, status);
@@ -469,19 +459,10 @@ fn run_rg_command(
             if !status.success() {
                 match child.stderr.take() {
                     Some(stderr) => {
-                        let reader = io::BufReader::new(stderr);
-                        let mut lines = String::new();
-                        for line in reader.lines() {
-                            match line {
-                                Ok(line) => {
-                                    println!("Error: {}", line);
-                                    lines.push_str(line.as_str());
-                                    lines.push('\n');
-                                }
-                                Err(err) => eprintln!("Error reading line: {}", err),
-                            }
-                        }
-                        window.emit("error", lines.as_str()).unwrap();
+                        let mut reader = io::BufReader::new(stderr);
+                        let mut buffer = String::new();
+                        let _ = reader.read_to_string(&mut buffer);
+                        window.emit("error", buffer.as_str()).unwrap();
                     }
                     None => {}
                 }
@@ -547,22 +528,94 @@ fn pip_search(
                 .spawn()
                 .expect("Failed to execute rga process");
 
+            if let Some(stdout) = rg_process.stdout.take() {
+                let reader = BufReader::new(stdout);
+                //总命中行数
+                let mut total_lines = 0;
+                //前3行内容
+                let mut top3_lines: Vec<String> = Vec::new();
+
+                for line_result in reader.lines() {
+                    match line_result {
+                        Ok(line) => {
+                            total_lines += 1;
+                            if total_lines < PIP_SEARCH_MAX_HITS {
+                                top3_lines.push(line);
+                            }
+                        }
+                        Err(err) => eprintln!("Error reading line: {}", err),
+                    }
+                }
+                // let lines: Vec<String> = reader
+                //     .lines()
+                //     .take(PIP_SEARCH_MAX_HITS)
+                //     .filter_map(|result| {
+                //         result
+                //             .map_err(|e| eprintln!("Error reading line: {}", e))
+                //             .ok()
+                //     })
+                //     .collect();
+                //let lines_len = lines.len();
+                // 如果输出结果不为空，则说明该文件包含当前关键字
+                //if let Some(next) = reader.lines().next() {
+                if total_lines > 0 {
+                    let lines_str = top3_lines.join("\n");
+                    //match next {
+                    //Ok(line) => {
+                    //搜索完毕，输出结果
+                    if i == keywords_len - 1 {
+                        let (created_at, modified_at) = get_filetime(file2.file_path.as_str());
+
+                        window
+                            .emit(
+                                "rg-output",
+                                total_lines.to_string()
+                                    + "~"
+                                    + file2.file_path.as_str()
+                                    + "~"
+                                    + created_at.as_str()
+                                    + "~"
+                                    + modified_at.as_str()
+                                    + "~"
+                                    + file2.content.as_str()
+                                    + "————————————————【"
+                                    + keywords[i].as_str()
+                                    + "】—"
+                                    + total_lines.to_string().as_str()
+                                    + "———————————————\n"
+                                    + lines_str.as_str(),
+                                //+ line.as_str(),
+                            )
+                            .unwrap();
+                    } else {
+                        // 不是最后一个关键字，则将Filelist结果传递给下一个关键字
+                        //let (_, content) = split_path_content(line.as_str());
+                        next_file_list.push(FileRecord {
+                            file_path: file2.file_path.clone(),
+                            content: file2.content.clone()
+                                + "————————————————【"
+                                + keywords[i].as_str()
+                                + "】—"
+                                + total_lines.to_string().as_str()
+                                + "————————————————\n"
+                                + lines_str.as_str()
+                                + "\n",
+                        });
+                    }
+                    //}
+                    //Err(err) => eprintln!("Error reading line: {}", err),
+                    //}
+                }
+            }
+            // 等待每次循环中的rga进程结束
             let status = rg_process.wait().expect("Failed to execute rga process");
             if !status.success() {
                 match rg_process.stderr.take() {
                     Some(stderr) => {
-                        let reader = io::BufReader::new(stderr);
+                        let mut reader = io::BufReader::new(stderr);
                         let mut lines = String::new();
-                        for line in reader.lines() {
-                            match line {
-                                Ok(line) => {
-                                    println!("Error: {}", line);
-                                    lines.push_str(line.as_str());
-                                    lines.push('\n');
-                                }
-                                Err(err) => eprintln!("Error reading line: {}", err),
-                            }
-                        }
+                        let _ = reader.read_to_string(&mut lines).unwrap();
+
                         eprintln!(
                             "Pip_srearch() running rga process Error : {}",
                             lines.as_str()
@@ -573,54 +626,6 @@ fn pip_search(
 
                 eprintln!("pip_srearch() Error running rga process: {}", status);
                 continue;
-            }
-            if let Some(stdout) = rg_process.stdout.take() {
-                let reader = BufReader::new(stdout);
-
-                // 如果输出结果不为空，则说明该文件包含当前关键字
-                if let Some(next) = reader.lines().next() {
-                    match next {
-                        Ok(line) => {
-                            //搜索完毕，输出结果
-                            if i == keywords_len - 1 {
-                                let (created_at, modified_at) =
-                                    get_filetime(file2.file_path.as_str());
-                                //let (_, content) = split_path_content(line.as_str());
-                                window
-                                    .emit(
-                                        "rg-output",
-                                        "1".to_string()
-                                            + "~"
-                                            + file2.file_path.as_str()
-                                            + "~"
-                                            + created_at.as_str()
-                                            + "~"
-                                            + modified_at.as_str()
-                                            + "~"
-                                            + file2.content.as_str()
-                                            + "——————————————————["
-                                            + keywords[i].as_str()
-                                            + "]——————————————————\n"
-                                            + line.as_str(),
-                                    )
-                                    .unwrap();
-                            } else {
-                                // 不是最后一个关键字，则将Filelist结果传递给下一个关键字
-                                //let (_, content) = split_path_content(line.as_str());
-                                next_file_list.push(FileRecord {
-                                    file_path: file2.file_path.clone(),
-                                    content: file2.content.clone()
-                                        + "——————————————————["
-                                        + keywords[i].as_str()
-                                        + "]——————————————————\n"
-                                        + line.as_str()
-                                        + "\n",
-                                });
-                            }
-                        }
-                        Err(err) => eprintln!("Error reading line: {}", err),
-                    }
-                }
             }
         }
 

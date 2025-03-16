@@ -38,7 +38,7 @@
                     </div>
                     <!--    <span class="input-group-text dark-mode">搜索模式</span> -->
                     <input class="form-control dark-mode  mt-1 ht-45 search-input" v-model="searchPattern" @keydown="handleSearchKeydown" placeholder="全文搜索关键字  如：市场调研 销售数据 人工智能"
-                        title="全文搜索关键字&#10;&#10;1. 支持正则表达式（需开启Regex模式）。&#10;2. 普通模式：即单关键字搜索，最常用！&#10;3. 管道模式：空格分隔多关键字，将漏斗式逐关键字过滤，较耗时。&#10;&#10;注意：&#10;管道模式下，低频关键字靠前放有利于缩短搜索时间&#10;管道模式下，每关键字仅显示一次命中结果&#10;&#10;正则说明：&#10;1. 全文搜索时，支持高级正则模式先行和后行断言，如：(?=.*K1)(?=.*K2)(?=.*K3)&emsp; 表示字符串同时含K1、K2、K3&#10;2. 仅搜文件名 时，默认为普通正则模式，不必勾选Regex" />
+                        title="全文搜索关键字&#10;&#10;1. 支持正则表达式（需开启Regex模式）。&#10;2. 普通模式：即单关键字搜索，最常用！&#10;3. 管道模式：空格分隔多关键字，将漏斗式逐关键字过滤，较耗时。&#10;&#10;注意：&#10;管道模式下，低频关键字靠前放有利于缩短搜索时间&#10;管道模式下，每关键字最多显示三次命中结果，仅显示最后关键字的命中次数。&#10;&#10;正则说明：&#10;1. 全文搜索时，支持高级正则模式先行和后行断言，如：(?=.*K1)(?=.*K2)(?=.*K3)&emsp; 表示字符串同时含K1、K2、K3&#10;2. 仅搜文件名 时，默认为普通正则模式，不必勾选Regex" />
                     <button class="btn btn-success mt-1 pt-1 ht-45 search-button" @click="runCommand"
                         title="为缩短搜索时间，程序会多线程并发搜索。&#10;因此，CPU占用率很高是正常现象！">搜索</button>
                 </div>
@@ -108,22 +108,23 @@
                         <a href="#" @click.prevent="sortOutputByHitCount" id="sort-by-hit-count"> 命中- </a>
                     </th>
 
-                    <th class="text-center fs-6 " v-if="displayModifiedAt" style="width: 40px;" title="点击按修改时间排序"><a href="#" @click.prevent="sortOutputByModified" id="sort-by-modified">修改时间-</a></th>
-                    <th class="text-center fs-6 " v-if="displayCreatedAt" style="width: 40px;" title="点击按创建时间排序"><a href="#" @click.prevent="sortOutputByCreated" id="sort-by-created">创建时间-</a></th>
+                    <th class="text-center fs-6 " v-show="displayModifiedAt" style="width: 40px;" title="点击按修改时间排序"><a href="#" @click.prevent="sortOutputByModified" id="sort-by-modified">修改时间-</a></th>
+                    <th class="text-center fs-6 " v-show="displayCreatedAt" style="width: 40px;" title="点击按创建时间排序"><a href="#" @click.prevent="sortOutputByCreated" id="sort-by-created">创建时间-</a></th>
                     <th class="text-start fs-6 " title="点击按文件名排序">
                         <a href="#" @click.prevent="sortOutputByFile" id="sort-by-file">&emsp;文件- </a>
                     </th>
 
                 </tr>
             </thead>
+
             <tbody>
                 <tr v-for="line in output" :key="line.file">
                     <td class="text-end fs-6 " title="转到文件所在目录"><a class="no-underline " href="#"
                             @click.prevent="gotoFolder(line.file)"><img src="/src/assets/folder.svg" class="icon"
                                 alt="Icon"></a></td>
                     <td class="text-end fs-6 " title="关键字在该文件中的出现次数/命中次数&#10;&#10;受限于【最大匹配次数】设置">{{ line.hitCount }}</td>
-                    <td class="text-center fs-6 " v-if="displayModifiedAt" title="">{{ line.modified_at}}</td>
-                    <td class="text-center fs-6 " v-if="displayCreatedAt" title="">{{ line.created_at}}</td>
+                    <td class="text-center fs-6 " v-show="displayModifiedAt" title="">{{ line.modified_at}}</td>
+                    <td class="text-center fs-6 " v-show="displayCreatedAt" title="">{{ line.created_at}}</td>
                     <td class="text-start fs-6 "><a class="no-underline " href="#" @click.prevent="openFile(line.file)"
                             :title="line.content"> {{ line.file }} </a></td>
 
@@ -134,7 +135,7 @@
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
-            <span>Version:1.1.0 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
+            <span>Version:1.1.1 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
         </div>
         </div>
     </div>
