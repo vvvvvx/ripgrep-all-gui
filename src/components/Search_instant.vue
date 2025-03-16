@@ -38,7 +38,7 @@
                     </div>
                     <!--    <span class="input-group-text dark-mode">搜索模式</span> -->
                     <input class="form-control dark-mode  mt-1 ht-45 search-input" v-model="searchPattern" @keydown="handleSearchKeydown" placeholder="全文搜索关键字  如：市场调研 销售数据 人工智能"
-                        title="全文搜索关键字&#10;&#10;1. 支持正则表达式。&#10;2. 普通模式：即单关键字搜索，最常用！&#10;3. 管道模式：空格分隔多关键字，将漏斗式逐关键字过滤，较耗时。&#10;&#10;注意：&#10;管道模式下，低频关键字靠前放有利于缩短搜索时间&#10;管道模式下，仅显示最后关键字的一次命中结果&#10;&#10;正则说明：&#10;1. 全文搜索时，支持高级正则模式先行和后行断言，如：(?=.*K1)(?=.*K2)(?=.*K3)&emsp; 表示字符串同时含K1、K2、K3&#10;2. 仅搜文件名 时，默认为普通正则模式，不必勾选Regex" />
+                        title="全文搜索关键字&#10;&#10;1. 支持正则表达式（需开启Regex模式）。&#10;2. 普通模式：即单关键字搜索，最常用！&#10;3. 管道模式：空格分隔多关键字，将漏斗式逐关键字过滤，较耗时。&#10;&#10;注意：&#10;管道模式下，低频关键字靠前放有利于缩短搜索时间&#10;管道模式下，每关键字仅显示一次命中结果&#10;&#10;正则说明：&#10;1. 全文搜索时，支持高级正则模式先行和后行断言，如：(?=.*K1)(?=.*K2)(?=.*K3)&emsp; 表示字符串同时含K1、K2、K3&#10;2. 仅搜文件名 时，默认为普通正则模式，不必勾选Regex" />
                     <button class="btn btn-success mt-1 pt-1 ht-45 search-button" @click="runCommand"
                         title="为缩短搜索时间，程序会多线程并发搜索。&#10;因此，CPU占用率很高是正常现象！">搜索</button>
                 </div>
@@ -62,25 +62,33 @@
                 <label class="form-check-label mt-0 pt-0 ht-45" for="">排除冷门耗时文件</label>
                 <input type="checkbox" class="form-check-input mt-2"  v-model="excludeNotCommon" />
             </div>
+            <div class="input-group mt-0 " style="width: fit-content;display: inline-flex;padding-left:0px;padding-right:0px;"
+                title="单个文件中出现的关键字次数达到[最大匹配次数]后，程序将不再搜索此文件，以提高效率。&#10;&#10;0 表示无限制。&#10;过大可能会导致搜索时间过长。">
+            <!--    <label class="form-check-label mt-0 pt-0 ht-45" for="max-count" style="width: fit-content;">最大匹配次数：</label>-->
+                <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 " style="background:#333;padding-right:6px;padding-top:4px;">最大匹配次数</span>
+                <input class="form-control dark-mode mt-0 ht-30" id="max-count" v-model="maxCount"
+                    style="width: 80px;" />
+            </div>
 
-            <div style="display: inline-flex;position: absolute;bottom: 0;gap: 0.5rem;">
+            <div class=" input-group mt-0  " style="width: fit-content;display: inline-flex;padding-left:0px;padding-right: 0px;"
+                title="目录遍历深度&#10;&#10;1-表示当前文件夹&#10;2-表示当前文件夹及子文件夹&#10;3-表示当前文件夹及子文件夹及子文件夹...&#10;&#10;深度越大，耗时越长">
+                <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 " style="background:#333;padding-right:6px;padding-top:4px;">目录遍历深度</span>
+                <input class="form-control dark-mode mt-0 ht-30" id="max-depth" v-model="maxDepth"
+                    style="width: 80px;" />
+            </div>
+
+            <div style="display: inline-flex;position: absolute;bottom: 0;gap: 0.5rem;padding-left:0px;padding-right: 0px; width:calc(100% - 280px);">
                 <label for="">执行状态：</label><label :class="['text-success', isDone ? '':'blink' ]" for=""><b>{{ cmdStatus }}</b></label>
                 &ensp;&ensp;<label>搜索结果：{{ output.length }} 条</label>
             </div>
             <div style="display: flex;justify-content:flex-end;align-items:center; gap: 0.5rem;padding-right: 15px;" class="parent-container">
-                <div class="input-group mt-0 " style="width: fit-content;display: inline-flex;padding-left:0px;"
-                    title="单个文件中出现的关键字次数达到[最大匹配次数]后，程序将不再搜索此文件，以提高效率。&#10;&#10;0 表示无限制。&#10;过大可能会导致搜索时间过长。">
-                <!--    <label class="form-check-label mt-0 pt-0 ht-45" for="max-count" style="width: fit-content;">最大匹配次数：</label>-->
-                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6" style="background:#333;padding-right:6px;padding-left:0px;">最大匹配次数</span>
-                    <input class="form-control dark-mode mt-0 ht-30" id="max-count" v-model="maxCount"
-                        style="width: 80px;" />
+                <div class="form-check mt-0" style="width: fit-content;" title="显示搜索结果文件创建时间">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="display-created-at">显示创建时间</label>
+                    <input type="checkbox" class="form-check-input mt-2" id="display-created-at" v-model="displayCreatedAt" />
                 </div>
-
-                <div class=" input-group mt-0  " style="width: fit-content;display: inline-flex;padding-left:0px;"
-                    title="目录遍历深度&#10;&#10;1-表示当前文件夹&#10;2-表示当前文件夹及子文件夹&#10;3-表示当前文件夹及子文件夹及子文件夹...&#10;&#10;深度越大，耗时越长">
-                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6" style="background:#333;padding-right:6px;padding-left:0px;">目录遍历深度</span>
-                    <input class="form-control dark-mode mt-0 ht-30" id="max-depth" v-model="maxDepth"
-                        style="width: 80px;" />
+                <div class="form-check mt-0" style="width: fit-content;" title="显示搜索结果文件修改时间">  
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="display-modified-at">显示修改时间</label>
+                    <input type="checkbox" class="form-check-input mt-2" id="display-modified-at" v-model="displayModifiedAt" />
                 </div>
 
             </div>
@@ -99,6 +107,9 @@
                     <th class="text-end fs-6 " style="width: 20px;" title="点击按命中次数排序">
                         <a href="#" @click.prevent="sortOutputByHitCount" id="sort-by-hit-count"> 命中- </a>
                     </th>
+
+                    <th class="text-center fs-6 " v-if="displayModifiedAt" style="width: 40px;" title="点击按修改时间排序"><a href="#" @click.prevent="sortOutputByModified" id="sort-by-modified">修改时间-</a></th>
+                    <th class="text-center fs-6 " v-if="displayCreatedAt" style="width: 40px;" title="点击按创建时间排序"><a href="#" @click.prevent="sortOutputByCreated" id="sort-by-created">创建时间-</a></th>
                     <th class="text-start fs-6 " title="点击按文件名排序">
                         <a href="#" @click.prevent="sortOutputByFile" id="sort-by-file">&emsp;文件- </a>
                     </th>
@@ -111,6 +122,8 @@
                             @click.prevent="gotoFolder(line.file)"><img src="/src/assets/folder.svg" class="icon"
                                 alt="Icon"></a></td>
                     <td class="text-end fs-6 " title="关键字在该文件中的出现次数/命中次数&#10;&#10;受限于【最大匹配次数】设置">{{ line.hitCount }}</td>
+                    <td class="text-center fs-6 " v-if="displayModifiedAt" title="">{{ line.modified_at}}</td>
+                    <td class="text-center fs-6 " v-if="displayCreatedAt" title="">{{ line.created_at}}</td>
                     <td class="text-start fs-6 "><a class="no-underline " href="#" @click.prevent="openFile(line.file)"
                             :title="line.content"> {{ line.file }} </a></td>
 
@@ -121,7 +134,7 @@
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
-            <span>Version:1.0.2 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
+            <span>Version:1.1.0 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
         </div>
         </div>
     </div>
@@ -149,6 +162,7 @@
 import { invoke } from '@tauri-apps/api/tauri';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { listen } from '@tauri-apps/api/event';
+import { tr } from 'vuetify/locale';
 
 
 function getById(id) {
@@ -157,7 +171,16 @@ function getById(id) {
 function scrollToTop() {
     getById("outputTable").scrollTop = 0;
 }
-
+function resetTableHeader() {
+    let sf = getById("sort-by-file");
+    let hc = getById("sort-by-hit-count") ;
+    let mt = getById("sort-by-modified");
+    let ct = getById("sort-by-created");
+    sf.innerText = "文件-";
+    hc.innerText = "命中-";
+    mt.innerText = "修改时间-";
+    ct.innerText = "创建时间-";
+}
 function isPatternNotOK(pattern) {
   // 非汉字字符过短检测，短于3字符的返回true。汉字字符不做检测。
   let re=/^[ ]*[\x00-\xFF]{1,3}([ ]|$)/;
@@ -197,6 +220,8 @@ export default {
         const excludeNotCommon=ref(true); // 是否排除不常用且耗时的图片、压缩文件、数据库、视频文件
         ////begin 新加
         const isDone=ref(true); //搜索是否执行结束
+        const displayCreatedAt=ref(false); //是否显示创建时间
+        const displayModifiedAt=ref(true); //是否显示修改时间
         const items= ref([
             { include: true, type: 'ada', content: '*.adb *.ads' },
             { include: true, type: 'agda', content: '*.agda *.lagda' },
@@ -491,11 +516,12 @@ export default {
          
         const sortOutputByHitCount = () => {
             let hc = getById("sort-by-hit-count");
-            let sf = getById("sort-by-file");
+            //let sf = getById("sort-by-file");
 
             if (hc.innerText === "命中-") {
                 //↑↓
                 //descending
+                resetTableHeader();
                 hc.innerText = "命中↓";
                 output.value.sort((a, b) => b.hitCount - a.hitCount);
             } else if (hc.innerText === "命中↓") {
@@ -507,15 +533,16 @@ export default {
                 hc.innerText = "命中↓";
                 output.value.sort((a, b) => b.hitCount - a.hitCount);
             }
-            sf.innerText = "文件-";
+            //sf.innerText = "文件-";
             scrollToTop();
         };
         const sortOutputByFile = () => {
             let sf = getById("sort-by-file");
-            let hc = getById("sort-by-hit-count");
+            //let hc = getById("sort-by-hit-count");
 
             if (sf.innerText === "文件-") {
                 //ascending
+                resetTableHeader();
                 sf.innerText = "文件↑";
                 output.value.sort((a, b) => a.file.localeCompare(b.file));
             } else if (sf.innerText === "文件↑") {
@@ -528,7 +555,44 @@ export default {
                 output.value.sort((a, b) => a.file.localeCompare(b.file));
             }
 
-            hc.innerText = "命中-";
+            //hc.innerText = "命中-";
+            scrollToTop();
+        };
+        const sortOutputByCreated = () => {
+            let sc = getById("sort-by-created");
+            if (sc.innerText === "创建时间-") {
+                //ascending
+                resetTableHeader();
+                sc.innerText = "创建时间↑";
+                output.value.sort((a, b) => a.created_at.localeCompare(b.created_at));
+            } else if (sc.innerText === "创建时间↑") {
+                //descending
+                sc.innerText = "创建时间↓";
+                output.value.sort((a, b) => b.created_at.localeCompare(a.created_at));
+            } else {
+                //ascending
+                sc.innerText = "创建时间↑";
+                output.value.sort((a, b) => a.created_at.localeCompare(b.created_at));
+            }
+            scrollToTop();
+        };
+        const sortOutputByModified = () => {
+            let sm = getById("sort-by-modified");
+            if (sm.innerText === "修改时间-") {
+                //ascending
+                resetTableHeader();
+                sm.innerText = "修改时间↑";
+                output.value.sort((a, b) => a.modified_at.localeCompare(b.modified_at));
+            } else if (sm.innerText === "修改时间↑") {
+                //descending
+                sm.innerText = "修改时间↓";
+                output.value.sort((a, b) => b.modified_at.localeCompare(a.modified_at));
+            } else {
+                //ascending
+                sm.innerText = "修改时间↑";
+                output.value.sort((a, b) => a.modified_at.localeCompare(b.modified_at));
+            }
+
             scrollToTop();
         };
         const runCommand = () => {
@@ -613,51 +677,64 @@ export default {
        
         onMounted(() => {
             getHomeDir();
-
-            listen('rg-output', event => {
-
+            listen('rg-output', event => {               
+            //  event.payload格式：hit_count~file~created_at~modified_at~content
+                let record=event.payload.split('~');
                 if (searchFilename.value) {
-
-                    output.value.push({ file: event.payload, content: '' });
+                    output.value.push({hitCount:0, file: record[1],created_at:record[2], modified_at:record[3], content: '' });
                     return;
                 }
-                // 找到第一个冒号的位置
-
-                let firstIndex = event.payload.indexOf(':');
-                // 如果是windows系统，冒号可能出现两次，所以需要找到第二个冒号的位置
-                if (OS.value === 'windows') {
-                    firstIndex = event.payload.indexOf(':', firstIndex + 1);
-                }
-
-                // 如果找不到冒号，返回原始字符串和空字符串
-                if (firstIndex === -1) {
-                    output.value.push({ file: event.payload, content: '' });
+                // 如果file字段为空
+                if (record[1] === '') {
                     return;
                 }
-                // 使用slice方法分割字符串
-                let firstPart = event.payload.slice(0, firstIndex);
-                let secondPart = event.payload.slice(firstIndex + 1);
-                if (secondPart.length > 1000) {
-                    secondPart = secondPart.slice(0, 1000) + '...';
-                }
-                // 非显示命中次数模式，文件名去重。把命中字符串content和前次命中字符串合并
-
-                if (firstPart === preFile.value) {
-                    // 去重
-                    output.value[output.value.length - 1].hitCount += 1;
-                    // 命中次数大于20时，显示前20个命中内容,其他忽略
-                    if (output.value[output.value.length - 1].hitCount < 20) {
-                        output.value[output.value.length - 1].content += "\n" + secondPart;
-                    }
-                    if (output.value[output.value.length - 1].hitCount === 20) {
-                        output.value[output.value.length - 1].content += "\n...";
-                    }
-                    return;
-                }
-                // 更改preFile为当前文件名
-                preFile.value = firstPart;
-                output.value.push({ hitCount: 1, file: firstPart, content: secondPart });
+                output.value.push({ hitCount: record[0], file: record[1],created_at:record[2], modified_at:record[3], content: record[4] });
             });
+
+            // listen('rg-output-bak', event => {
+
+            //     if (searchFilename.value) {
+
+            //         output.value.push({ file: event.payload, content: '' });
+            //         return;
+            //     }
+            //     // 找到第一个冒号的位置
+
+            //     let firstIndex = event.payload.indexOf(':');
+            //     // 如果是windows系统，冒号可能出现两次，所以需要找到第二个冒号的位置
+            //     if (OS.value === 'windows') {
+            //         firstIndex = event.payload.indexOf(':', firstIndex + 1);
+            //     }
+
+            //     // 如果找不到冒号，返回原始字符串和空字符串
+            //     if (firstIndex === -1) {
+            //         output.value.push({ file: event.payload, content: '' });
+            //         return;
+            //     }
+            //     // 使用slice方法分割字符串
+            //     let firstPart = event.payload.slice(0, firstIndex);
+            //     let secondPart = event.payload.slice(firstIndex + 1);
+            //     if (secondPart.length > 1000) {
+            //         secondPart = secondPart.slice(0, 1000) + '...';
+            //     }
+            //     // 非显示命中次数模式，文件名去重。把命中字符串content和前次命中字符串合并
+
+            //     if (firstPart === preFile.value) {
+            //         // 去重
+            //         output.value[output.value.length - 1].hitCount += 1;
+            //         // 命中次数大于20时，显示前20个命中内容,其他忽略
+            //         if (output.value[output.value.length - 1].hitCount < 20) {
+            //             output.value[output.value.length - 1].content += "\n" + secondPart;
+            //         }
+            //         if (output.value[output.value.length - 1].hitCount === 20) {
+            //             output.value[output.value.length - 1].content += "\n...";
+            //         }
+            //         return;
+            //     }
+            //     // 更改preFile为当前文件名
+            //     preFile.value = firstPart;
+            //     output.value.push({ hitCount: 1, file: firstPart, content: secondPart });
+            // });
             listen('completed', event => {
                 let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
                 let ptrn = t.filter(item => item.trim() !== '');//remove empty string
@@ -711,6 +788,8 @@ export default {
             dispHitCount,
             sortOutputByFile,
             sortOutputByHitCount,
+            sortOutputByCreated,
+            sortOutputByModified,            
             preFile,
             cmdStatus,
             searchFilename,
@@ -735,7 +814,9 @@ export default {
             closeRuningAlert,
             //end 新加
             regexMode,
-            isDone
+            isDone,
+            displayCreatedAt,
+            displayModifiedAt,
         };
     }
 
