@@ -92,7 +92,7 @@ struct FileRecord {
     content: String,
 }
 #[tauri::command]
-fn run_rg_command(
+async fn run_rg_command(
     window: tauri::Window,
     searchPattern: &str,    // 全文搜索模式
     mut searchPath: String, // 搜索路径
@@ -105,14 +105,14 @@ fn run_rg_command(
     maxDepth: u32,          // 最大搜索深度
     searchBinary: bool,     // 是否搜索二进制文件
     excludeNotCommon: bool, // 是否排除常见压缩文件
-) {
+) -> Result<(), String> {
     // 判断软件是否过期
     let current_date = Local::now().naive_local().date();
     if current_date > OVER_DATE.unwrap() && OS != "linux" {
         window
             .emit("overdate", Some("软件已过期！\n请根据窗口右下方联系方式索取最新版，或到下面网址下载最新版：\n\nhttps://sourceforge.net/projects/fast-full-text-search/files/latest/download ".to_string()))
             .unwrap();
-        return;
+        return Ok(());
     }
 
     //let pattern = searchPattern.clone();
@@ -124,7 +124,9 @@ fn run_rg_command(
     let mut search_hidden_str = " ";
     let max_depth_str = " -d ".to_string() + maxDepth.to_string().as_str() + " ";
     let mut search_binary_str = " ";
-    let common_args = " -M 1000 --max-columns-preview ";
+    // -i 忽略大小写
+    // --glob-case-insensitive 忽略文件名大小写
+    let common_args = " -i -M 1000 --max-columns-preview --glob-case-insensitive ";
     let keywords: Vec<String> = searchPattern
         .split_whitespace()
         .map(|s| s.to_string())
@@ -198,11 +200,14 @@ fn run_rg_command(
     if searchFilename {
         //清空重新制作
         rga_args.clear();
+
         rga_args.append(&mut split_args(&file_patrn_str));
         rga_args.push("--files".to_string());
         rga_args.append(&mut split_args(&search_hidden_str));
         rga_args.append(&mut split_args(&max_depth_str));
         rga_args.push(searchPattern.to_string());
+        rga_args.push("-i".to_string());
+        rga_args.push("--glob-case-insensitive".to_string());
     }
     //rga_str += " --no-messages ";
     rga_args.push("--no-messages".to_string());
@@ -231,13 +236,14 @@ fn run_rg_command(
                         Some("执行结束：正则表达式解析错误!".to_string()),
                     )
                     .unwrap();
-                return;
+                return Ok(());
             }
         };
         println!("Filename regex:{}", re);
     }
 
-    std::thread::spawn(move || {
+    //std::thread::spawn(move || {
+    tokio::task::spawn_blocking(move || {
         // 如果是空格分隔的多关键字，则启用pip_search ，更新进度
         if keywords.len() > 1 && !regexMode {
             window
@@ -509,7 +515,10 @@ fn run_rg_command(
         // unsafe {
         //     CHILD_PROCESS = None;
         // }
-    });
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 // 用于三个及以上关键字的搜索采用管道过滤法，即前一个关键字的输出作为后一个关键字的输入

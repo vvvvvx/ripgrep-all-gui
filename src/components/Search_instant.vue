@@ -135,7 +135,7 @@
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
-            <span>Version:1.1.3 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
+            <span>Version:1.1.4 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
         </div>
         </div>
     </div>
@@ -163,7 +163,7 @@
 
 <script>
 import { invoke } from '@tauri-apps/api/tauri';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { listen } from '@tauri-apps/api/event';
 import { tr } from 'vuetify/locale';
 
@@ -598,7 +598,7 @@ export default {
 
             scrollToTop();
         };
-        const runCommand = () => {
+        const runCommand =async () => {
 
             if (!isDone.value) {
               //alert("上一搜索未结束...\n请耐心等待。\n\n如欲强制终止，请关闭本程序后重新打开。");
@@ -612,7 +612,7 @@ export default {
               return;
             } 
             if (searchPattern.value === '' && !searchFilename.value) {    //if search pattern is empty, show error message and return
-                alert('搜索模式不能为空');
+                alert('搜索关键字不能为空');
                 return;
             }
 
@@ -657,7 +657,14 @@ export default {
             }else{
                 cmdStatus.value = "全文搜索中...";
             }
-            invoke('run_rg_command', { searchPattern: searchPattern.value, searchPath: searchPath.value, filenamePattern: filenamePattern.value, regexMode: regexMode.value, dispHitCount: dispHitCount.value, searchFilename: searchFilename.value, maxCount: Number(maxCount.value) , searchHidden: searchHidden.value , maxDepth: Number(maxDepth.value) , searchBinary: searchBinary.value ,excludeNotCommon: excludeNotCommon.value });
+            //强制更新页面 显示搜索进度
+            await nextTick();
+            await new Promise(resolve => setTimeout(resolve, 50));
+            try {
+                await invoke('run_rg_command', { searchPattern: searchPattern.value, searchPath: searchPath.value, filenamePattern: filenamePattern.value, regexMode: regexMode.value, dispHitCount: dispHitCount.value, searchFilename: searchFilename.value, maxCount: Number(maxCount.value) , searchHidden: searchHidden.value , maxDepth: Number(maxDepth.value) , searchBinary: searchBinary.value ,excludeNotCommon: excludeNotCommon.value });
+            } catch (e) {
+                console.error(e);
+            }
         };
         const openFolderDialog = async () => {
             try {
