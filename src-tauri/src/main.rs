@@ -105,6 +105,7 @@ async fn run_rg_command(
     maxDepth: u32,          // 最大搜索深度
     searchBinary: bool,     // 是否搜索二进制文件
     excludeNotCommon: bool, // 是否排除常见压缩文件
+    maxColumn: u32,         // 匹配结果最大显示长度，超过将被省略显示
 ) -> Result<(), String> {
     // 判断软件是否过期
     let current_date = Local::now().naive_local().date();
@@ -126,7 +127,7 @@ async fn run_rg_command(
     let mut search_binary_str = " ";
     // -i 忽略大小写
     // --glob-case-insensitive 忽略文件名大小写
-    let common_args = " -i -M 1000 --max-columns-preview --glob-case-insensitive ";
+    let common_args = " -i --max-columns-preview --glob-case-insensitive ";
     let keywords: Vec<String> = searchPattern
         .split_whitespace()
         .map(|s| s.to_string())
@@ -137,7 +138,7 @@ async fn run_rg_command(
     // 告知前端OS情况
     window.emit("get-os", OS.to_string()).unwrap();
     println!("OS:{}", OS);
-
+    println!("maxColumn:{}", maxColumn);
     //if regexMode {
     //    println!("Regex:{}", re.to_string());
     //    ptrn_str = format!(" --engine=auto -e  {} ", searchPattern);
@@ -192,7 +193,8 @@ async fn run_rg_command(
             rga_args.push(keywords[0].to_string());
         }
     }
-
+    rga_args.push("-M".to_string());
+    rga_args.push(maxColumn.to_string());
     rga_args.append(&mut split_args(&exclude_not_common_str));
     rga_args.append(&mut split_args(&file_patrn_str));
 
@@ -399,7 +401,17 @@ async fn run_rg_command(
                                                 + "~"
                                                 + record.modified_at.as_str()
                                                 + "~"
-                                                + record.content.as_str(),
+                                                + record
+                                                    .content
+                                                    .replace(
+                                                        "omitted end of long line",
+                                                        "过长省略...",
+                                                    )
+                                                    .replace(
+                                                        "Omitted long matching line",
+                                                        "...省略过长匹配行...",
+                                                    )
+                                                    .as_str(),
                                         )
                                         .unwrap();
                                 }
@@ -460,7 +472,11 @@ async fn run_rg_command(
                             + "~"
                             + record.modified_at.as_str()
                             + "~"
-                            + record.content.as_str(),
+                            + record
+                                .content
+                                .replace("omitted end of long line", "行尾过长略...")
+                                .replace("Omitted long matching line", "...省略过长匹配行...")
+                                .as_str(),
                     )
                     .unwrap();
             }
@@ -482,7 +498,10 @@ async fn run_rg_command(
                     keywords.to_vec(),
                     file_list.to_vec(),
                     child,
-                    "-M 1000 -m ".to_string() + maxCount.to_string().as_str(),
+                    "-M ".to_string()
+                        + maxColumn.to_string().as_str()
+                        + " -m "
+                        + maxCount.to_string().as_str(),
                 );
                 println!("Command finished with status: {}", status.code().unwrap());
                 emit_completed_signal(window, status);
@@ -542,7 +561,7 @@ fn pip_search(
         + "]->("
         + file_list.len().to_string().as_str()
         + ")";
-
+    println!("Addtional args: {}", addtional_args);
     for i in 1..keywords.len() {
         let mut next_file_list: Vec<FileRecord> = Vec::new();
         let keyword = keywords[i].clone();
@@ -612,7 +631,7 @@ fn pip_search(
                         window
                             .emit(
                                 "rg-output",
-                                total_lines.to_string()
+                                (total_lines.to_string()
                                     + "~"
                                     + file2.file_path.as_str()
                                     + "~"
@@ -626,7 +645,9 @@ fn pip_search(
                                     + "["
                                     + total_lines.to_string().as_str()
                                     + "]———————————————\n"
-                                    + lines_str.as_str(),
+                                    + lines_str.as_str())
+                                .replace("omitted end of long line", "行尾过长略...")
+                                .replace("Omitted long matching line", "...省略过长匹配行..."),
                                 //+ line.as_str(),
                             )
                             .unwrap();

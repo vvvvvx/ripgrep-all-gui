@@ -76,6 +76,13 @@
                 <input class="form-control dark-mode mt-0 ht-30" id="max-depth" v-model="maxDepth"
                     style="width: 80px;" />
             </div>
+            
+            <div class=" input-group mt-0  " style="width: fit-content;display: inline-flex;padding-left:0px;padding-right: 0px;"
+                title="匹配结果行预览最大长度，超过此长度将被截断，并省略显示。">
+                <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 " style="background:#333;padding-right:6px;padding-top:4px;">最大预览长度</span>
+                <input class="form-control dark-mode mt-0 ht-30" id="max-column" v-model="maxColumn"
+                    style="width: 80px;" />
+            </div>
 
             <div style="display: inline-flex;position: absolute;bottom: 0;gap: 0.5rem;padding-left:0px;padding-right: 0px; width:calc(100% - 280px);">
                 <label for="">执行状态：</label><label :class="['text-success', isDone ? '':'blink' ]" for=""><b>{{ cmdStatus }}</b></label>
@@ -225,6 +232,7 @@ export default {
         const isDone=ref(true); //搜索是否执行结束
         const displayCreatedAt=ref(false); //是否显示创建时间
         const displayModifiedAt=ref(true); //是否显示修改时间
+        const maxColumn=ref(200); //匹配结果行的最大显示长度,过长将被省略显示
         const items= ref([
             { include: true, type: 'ada', content: '*.adb *.ads' },
             { include: true, type: 'agda', content: '*.agda *.lagda' },
@@ -635,7 +643,11 @@ export default {
                 alert('目录遍历深度必须正整数');
                 return;
             }
-          
+            if (isNaN(maxColumn.value) || maxColumn.value < 0) {
+                alert('匹配行最大显示长度必须为正整数');
+                return;
+            }
+            
             if(filenamePattern.value.trim() === '') {
                 //alert('【文件类别】未指定，将搜索所有类别的文件，速度较慢！\n\n如需终止搜索，请关闭本程序。\n\n请耐心等待！');
                 showCustomAlert();
@@ -661,7 +673,19 @@ export default {
             await nextTick();
             await new Promise(resolve => setTimeout(resolve, 50));
             try {
-                await invoke('run_rg_command', { searchPattern: searchPattern.value, searchPath: searchPath.value, filenamePattern: filenamePattern.value, regexMode: regexMode.value, dispHitCount: dispHitCount.value, searchFilename: searchFilename.value, maxCount: Number(maxCount.value) , searchHidden: searchHidden.value , maxDepth: Number(maxDepth.value) , searchBinary: searchBinary.value ,excludeNotCommon: excludeNotCommon.value });
+                await invoke('run_rg_command', { 
+                    searchPattern: searchPattern.value, 
+                    searchPath: searchPath.value, 
+                    filenamePattern: filenamePattern.value, 
+                    regexMode: regexMode.value, 
+                    dispHitCount: dispHitCount.value, 
+                    searchFilename: searchFilename.value, 
+                    maxCount: Number(maxCount.value) , 
+                    searchHidden: searchHidden.value , 
+                    maxDepth: Number(maxDepth.value) , 
+                    searchBinary: searchBinary.value ,
+                    excludeNotCommon: excludeNotCommon.value,
+                    maxColumn:Number(maxColumn.value), });
             } catch (e) {
                 console.error(e);
             }
@@ -782,6 +806,7 @@ export default {
             isDone,
             displayCreatedAt,
             displayModifiedAt,
+            maxColumn,
         };
     }
 
