@@ -292,9 +292,9 @@ fn run_rg_command(
 
         if let Some(stdout) = child.stdout.take() {
             let reader = io::BufReader::new(stdout);
-            let mut pre_path = String::new();
-            let mut pre_content = String::new();
-            let mut pip_content_count = 0;
+            let mut pre_path = String::new(); // 前一个文件路径
+            let mut pre_content = String::new(); // 前一个文件内容
+            let mut pip_content_count = 0; //pip_search时，前一文件累计content追加预览数
 
             let mut record = Record {
                 hit_count: 0,
@@ -374,6 +374,7 @@ fn run_rg_command(
                                 pip_content_count = pip_content_count + 1;
                             }
                         } else {
+                            println!("Line: {}", line.as_str());
                             let (path, content) = split_path_content(line.as_str());
                             if path.len() == 0 {
                                 continue;
@@ -427,6 +428,36 @@ fn run_rg_command(
                     Err(err) => eprintln!("Error reading line: {}", err),
                 }
             }
+            //循环结束，处理最后一个文件
+            // 如果是pip_search
+            if keywords.len() > 1 && !regexMode {
+                file_list.push(FileRecord {
+                    file_path: pre_path,
+                    content: "————————————————".to_string()
+                        + keywords[0].as_str()
+                        + "["
+                        + pip_content_count.to_string().as_str()
+                        + "]————————————————\n"
+                        + pre_content.as_str()
+                        + "\n",
+                });
+            }
+            if record.hit_count > 0 {
+                window
+                    .emit(
+                        "rg-output",
+                        record.hit_count.to_string()
+                            + "~"
+                            + record.path.as_str()
+                            + "~"
+                            + record.created_at.as_str()
+                            + "~"
+                            + record.modified_at.as_str()
+                            + "~"
+                            + record.content.as_str(),
+                    )
+                    .unwrap();
+            }
         }
 
         // 如果是空格分隔的多关键字，则启用pip_search
@@ -460,7 +491,9 @@ fn run_rg_command(
                         let mut reader = io::BufReader::new(stderr);
                         let mut buffer = String::new();
                         let _ = reader.read_to_string(&mut buffer);
-                        window.emit("error", buffer.as_str()).unwrap();
+                        if buffer.trim().len() > 0 {
+                            window.emit("error", buffer.as_str()).unwrap();
+                        }
                     }
                     None => {}
                 }
@@ -649,6 +682,7 @@ fn pip_search(
 }
 //return (created_at, modified_at)
 fn get_filetime(file_path: &str) -> (String, String) {
+    println!("get_filetime: file_path:{}", file_path);
     let metadata = fs::metadata(file_path).expect("Failed to get metadata");
     let mut created_at = String::new();
     let mut modified_at = String::new();
@@ -682,15 +716,21 @@ fn split_path_content(line: &str) -> (String, String) {
     } else if pathes.len() >= 2 {
         //windows下，路径中盘符后一定有一个冒号，所以第二个冒号后才是content
         if OS == "windows" {
-            path = pathes[0].to_string() + pathes[1];
+            path = pathes[0].to_string() + ":" + pathes[1];
             for i in 2..pathes.len() {
                 content += pathes[i];
+                if i < pathes.len() - 1 {
+                    content += ":"; //补充上之前的冒号
+                }
             }
         } else {
             //linux下，第一个冒号后是content
             path = pathes[0].to_string();
             for i in 1..pathes.len() {
                 content += pathes[i];
+                if i < pathes.len() - 1 {
+                    content += ":"; //补充上之前的冒号
+                }
             }
         }
     } else {

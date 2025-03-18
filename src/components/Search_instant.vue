@@ -123,8 +123,8 @@
                             @click.prevent="gotoFolder(line.file)"><img src="/src/assets/folder.svg" class="icon"
                                 alt="Icon"></a></td>
                     <td class="text-end fs-6 " title="关键字在该文件中的出现次数/命中次数&#10;&#10;受限于【最大匹配次数】设置">{{ line.hitCount }}</td>
-                    <td class="text-center fs-6 " v-show="displayModifiedAt" title="">{{ line.modified_at}}</td>
-                    <td class="text-center fs-6 " v-show="displayCreatedAt" title="">{{ line.created_at}}</td>
+                    <td class="text-center fs-6 " v-show="displayModifiedAt" style="width: 40px;" title="">{{ line.modified_at}}</td>
+                    <td class="text-center fs-6 " v-show="displayCreatedAt" style="width: 40px;" title="">{{ line.created_at}}</td>
                     <td class="text-start fs-6 "><a class="no-underline " href="#" @click.prevent="openFile(line.file)"
                             :title="line.content"> {{ line.file }} </a></td>
 
@@ -135,7 +135,7 @@
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
-            <span>Version:1.1.1 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
+            <span>Version:1.1.3 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
         </div>
         </div>
     </div>
@@ -274,7 +274,7 @@ export default {
             { include: true, type: 'dhall', content: '*.dhall' },
             { include: true, type: 'diff', content: '*.diff *.patch' },
             { include: true, type: 'dita', content: '*.dita *.ditamap *.ditaval' },
-            { include: true, type: 'doc', content: '*.docx *.doc *.odt *.ods *.odf *.rtf *.xls *.xlsx *.pdf' },
+            { include: true, type: 'doc', content: '*.docx *.doc *.odt *.ods *.odf *.rtf *.xls *.xlsx *.pdf *.PDF' },
             { include: true, type: 'docker', content: '*Dockerfile*' },
             { include: true, type: 'dockercompose', content: 'docker-compose.*.yml docker-compose.yml' },
             { include: true, type: 'dts', content: '*.dts *.dtsi' },
@@ -353,7 +353,7 @@ export default {
             { include: true, type: 'pants', content: 'BUILD' },
             { include: true, type: 'pascal', content: '*.dpr *.inc *.lpr *.pas *.pp' },
             { include: true, type: 'picture', content: '*.[jJ][pP][gG] *.[jJ][pP][eE][gG] *.[bB][mM][pP] *.[pP][nN][gG] *.[gG][iI][fF] *.jpg *.tiff *.raw *.svg *.psd *.eps' },
-            { include: true, type: 'pdf', content: '*.pdf' },
+            { include: true, type: 'pdf', content: '*.pdf *.PDF' },
             { include: true, type: 'perl', content: '*.PL *.perl *.pl *.plh *.plx *.pm *.t' },
             { include: true, type: 'php', content: '*.php *.php3 *.php4 *.php5 *.php7 *.php8 *.pht *.phtml' },
             { include: true, type: 'po', content: '*.po' },
@@ -643,22 +643,19 @@ export default {
          
             isDone.value=false;
 
-
             let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
             let ptrn = t.filter(item => item.trim() !== '');//remove empty string
 
-            //if (ptrn.length > 1 && regexMode.value === false) {
-            //    alert('搜索关键词大于1个，将启用管道模式，可能比较耗时!\n\n请耐心等待......');
-            //}
             output.value = [];//clear output before running new command
-            // reset
-            getById("sort-by-file").innerText = "文件-";
-            getById("sort-by-hit-count").innerText = "命中-";
+            // reset 表头排序
+            resetTableHeader();
             preFile.value = "";//reset preFile before running new command
-            if (ptrn.length > 1 && regexMode.value === false) {
+            if (ptrn.length > 1 && !regexMode.value ) {
                 cmdStatus.value = "管道模式中(较耗时)...";
+            }else if (searchFilename.value){
+                cmdStatus.value = "文件名搜索中...";
             }else{
-                cmdStatus.value = "搜索中...";
+                cmdStatus.value = "全文搜索中...";
             }
             invoke('run_rg_command', { searchPattern: searchPattern.value, searchPath: searchPath.value, filenamePattern: filenamePattern.value, regexMode: regexMode.value, dispHitCount: dispHitCount.value, searchFilename: searchFilename.value, maxCount: Number(maxCount.value) , searchHidden: searchHidden.value , maxDepth: Number(maxDepth.value) , searchBinary: searchBinary.value ,excludeNotCommon: excludeNotCommon.value });
         };
@@ -679,6 +676,7 @@ export default {
         };
        
         onMounted(() => {
+            //设置默认搜索目录
             getHomeDir();
             listen('rg-output', event => {               
             //  event.payload格式：hit_count~file~created_at~modified_at~content
