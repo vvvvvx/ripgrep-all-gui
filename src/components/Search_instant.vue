@@ -141,7 +141,9 @@
     </div>
     <div id="alertBox" class="custom-alert" >
         <span style=" font-weight: bold;" class="fs-5 text-warning ">【文件类别】未指定</span><br><br>
-      将搜索所有类别的文件，速度较慢！ 请耐心等待...<br><br>
+      将搜索所有类别的文件，速度较慢！ 请耐心等待...<br>
+      指定文件类型，速度成倍提升！<br><br>
+
       <span class="red-text">如需终止漫长搜索，请关闭本程序后重开。</span>
       
       <br><br>

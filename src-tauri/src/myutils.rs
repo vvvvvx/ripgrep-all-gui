@@ -1,18 +1,16 @@
 //use std::path::Path;
 #[cfg(windows)]
 use std::os::windows::ffi::OsStrExt;
-use std::ptr;
-use std::{
-    ffi::OsStr,
-    io::{BufRead, BufReader},
-    process::{Child, Command, ExitStatus, Stdio},
-};
+use std::process::Command;
 
 #[cfg(windows)]
 use winapi::shared::minwindef::{DWORD, UINT};
 
 #[cfg(windows)]
 use winapi::um::fileapi::{GetDriveTypeW, GetFileAttributesW};
+
+#[cfg(windows)]
+use std::ffi::OsStr;
 
 #[cfg(windows)]
 fn is_onedrive_path(path: &str) -> bool {

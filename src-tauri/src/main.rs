@@ -5,16 +5,14 @@
 use open::that;
 use regex::Regex;
 use ripgrepa_gui::myutils::*;
-use serde::Serialize;
 use std::env::consts::OS;
 use std::io::{self, BufRead, BufReader, Read};
-use std::os::linux::raw::stat;
-use tauri::window;
+//use tauri::window;
 //use tauri::{window, EventLoopMessage};
 //use std::os;
 
 //use std::os::linux::raw::stat;
-use chrono::{format, DateTime, Local, NaiveDate, NaiveDateTime, TimeZone, Utc};
+use chrono::{Local, NaiveDate, TimeZone, Utc};
 use filetime::FileTime;
 use rfd::FileDialog;
 use std::fs;
@@ -338,17 +336,6 @@ fn run_rg_command(
                         }
                         // 如果是空格分隔的多关键字，则启用pip_search
                         if keywords.len() > 1 && !regexMode {
-                            // if pathes.len() == 1 {
-                            //     path = pathes[0].to_string();
-                            // } else if pathes.len() >= 2 {
-                            //     if OS == "windows" {
-                            //         path = pathes[0].to_string() + pathes[1];
-                            //     } else {
-                            //         path = pathes[0].to_string();
-                            //     }
-                            // } else {
-                            //     continue;
-                            // }
                             let (path, content) = split_path_content(line.as_str());
                             if first_line {
                                 pre_path = path.clone();
@@ -360,11 +347,11 @@ fn run_rg_command(
                                 //把新文件加入file_list
                                 file_list.push(FileRecord {
                                     file_path: pre_path,
-                                    content: "————————————————【".to_string()
+                                    content: "————————————————".to_string()
                                         + keywords[0].as_str()
-                                        + "】—"
+                                        + "["
                                         + pip_content_count.to_string().as_str()
-                                        + "————————————————\n"
+                                        + "]————————————————\n"
                                         + pre_content.as_str()
                                         + "\n",
                                 });
@@ -528,6 +515,19 @@ fn pip_search(
             let file2 = file.clone();
             println!("在文件 {} 中搜索: {}", file.file_path, keywords[i]);
             // 对于每个文件，使用 rg 进行进一步的关键字过滤
+            #[cfg(windows)]
+            let mut rg_process = Command::new("rga")
+                //.args(addtional_args.split_whitespace().collect::<Vec<&str>>())
+                .args(split_args(&addtional_args))
+                .arg(keyword.clone())
+                .arg("--no-messages")
+                .arg(file.file_path)
+                .creation_flags(0x08000000) // CREATE_NO_WINDOW
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .expect("Failed to execute rga process");
+            #[cfg(not(windows))]
             let mut rg_process = Command::new("rga")
                 //.args(addtional_args.split_whitespace().collect::<Vec<&str>>())
                 .args(split_args(&addtional_args))
@@ -538,7 +538,6 @@ fn pip_search(
                 .stderr(Stdio::piped())
                 .spawn()
                 .expect("Failed to execute rga process");
-
             if let Some(stdout) = rg_process.stdout.take() {
                 let reader = BufReader::new(stdout);
                 //总命中行数
@@ -557,16 +556,7 @@ fn pip_search(
                         Err(err) => eprintln!("Error reading line: {}", err),
                     }
                 }
-                // let lines: Vec<String> = reader
-                //     .lines()
-                //     .take(PIP_SEARCH_MAX_HITS)
-                //     .filter_map(|result| {
-                //         result
-                //             .map_err(|e| eprintln!("Error reading line: {}", e))
-                //             .ok()
-                //     })
-                //     .collect();
-                //let lines_len = lines.len();
+
                 // 如果输出结果不为空，则说明该文件包含当前关键字
                 //if let Some(next) = reader.lines().next() {
                 if total_lines > 0 {
@@ -589,11 +579,11 @@ fn pip_search(
                                     + modified_at.as_str()
                                     + "~"
                                     + file2.content.as_str()
-                                    + "————————————————【"
+                                    + "————————————————"
                                     + keywords[i].as_str()
-                                    + "】—"
+                                    + "["
                                     + total_lines.to_string().as_str()
-                                    + "———————————————\n"
+                                    + "]———————————————\n"
                                     + lines_str.as_str(),
                                 //+ line.as_str(),
                             )
@@ -604,11 +594,11 @@ fn pip_search(
                         next_file_list.push(FileRecord {
                             file_path: file2.file_path.clone(),
                             content: file2.content.clone()
-                                + "————————————————【"
+                                + "————————————————"
                                 + keywords[i].as_str()
-                                + "】—"
+                                + "["
                                 + total_lines.to_string().as_str()
-                                + "————————————————\n"
+                                + "]————————————————\n"
                                 + lines_str.as_str()
                                 + "\n",
                         });
@@ -672,7 +662,11 @@ fn get_filetime(file_path: &str) -> (String, String) {
     (created_at, modified_at)
 }
 fn format_filetime(filetime: &FileTime) -> String {
-    let seconds = filetime.seconds();
+    #[cfg(windows)]
+    let seconds = (filetime.seconds() - 11644473600) as i64;
+    #[cfg(not(windows))]
+    let seconds = filetime.unix_seconds();
+
     let nanos = filetime.nanoseconds();
     let datetime = Utc.timestamp_opt(seconds, nanos).unwrap();
     datetime.format("%Y-%m-%d %H:%M:%S").to_string()
