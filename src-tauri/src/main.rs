@@ -520,18 +520,18 @@ fn pip_progress_update(
     pip_keywords_records: &Vec<PipKeywordRecord>,
     index: usize,
 ) {
-    let mut s = "[管道搜索]->[".to_string()
-        + pip_keywords_records[0].keyword.as_str()
-        + "]->("
-        + pip_keywords_records[0].hits.to_string().as_str()
-        + ")";
-    for i in 1..index + 1 {
+    let mut s = "[管道搜索]".to_string();
+
+    for i in 0..index + 1 {
         s = s.clone()
             + "->["
             + pip_keywords_records[i].keyword.as_str()
             + "]->("
             + pip_keywords_records[i].hits.to_string().as_str()
             + ")";
+        if pip_keywords_records[i].hits == 0 {
+            break;
+        }
     }
     emit_signal(window.clone(), "progress", s.as_str());
 }
@@ -553,21 +553,21 @@ fn pip_search(
     }
     // 针对每一个后续关键字进行过滤
     let keywords_len = keywords.len();
-    let mut key = "->[".to_string()
-        + keywords[0].as_str()
-        + "]->("
-        + file_list.len().to_string().as_str()
-        + ")";
+    // let mut key = "->[".to_string()
+    //     + keywords[0].as_str()
+    //     + "]->("
+    //     + file_list.len().to_string().as_str()
+    //     + ")";
     println!("Addtional args: {}", addtional_args);
     for i in 1..keywords.len() {
         let mut next_file_list: Vec<FileRecord> = Vec::new();
         let keyword = keywords[i].clone();
 
-        key = key.clone() + "->[" + keywords[i].as_str() + "]";
+        // key = key.clone() + "->[" + keywords[i].as_str() + "]";
         // 输出当前关键字的进度信息
-        window
-            .emit("progress", Some(key.clone()))
-            .expect("Failed to send completed message");
+        //window
+        // .emit("progress", Some(key.clone()))
+        // .expect("Failed to send completed message");
 
         for file in file_list {
             let file2 = file.clone();
