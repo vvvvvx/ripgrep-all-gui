@@ -78,14 +78,14 @@
             </div>
             
             <div class=" input-group mt-0  " style="width: fit-content;display: inline-flex;padding-left:0px;padding-right: 0px;"
-                title="匹配结果行预览最大长度，超过此长度将被截断，并省略显示。">
+                title="匹配结果行预览最大字符数，超过此长度将被截断，并省略显示。">
                 <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 " style="background:#333;padding-right:6px;padding-top:4px;">最大预览长度</span>
                 <input class="form-control dark-mode mt-0 ht-30" id="max-column" v-model="maxColumn"
                     style="width: 80px;" />
             </div>
 
             <div style="display: inline-flex;position: absolute;bottom: 0;gap: 0.5rem;padding-left:0px;padding-right: 0px; width:calc(100% - 280px);">
-                <label for="">执行状态：</label><label :class="['text-success', isDone ? '':'blink' ]" for=""><b>{{ cmdStatus }}</b></label>
+                <label for="">执行状态：</label><label :class="['text-success', (isDone || isPipMode) ? '':'blink' ]" for=""><b>{{ cmdStatus }}</b></label>
                 &ensp;&ensp;<label>搜索结果：{{ output.length }} 条</label>
             </div>
             <div style="display: flex;justify-content:flex-end;align-items:center; gap: 0.5rem;padding-right: 15px;" class="parent-container">
@@ -233,6 +233,7 @@ export default {
         const displayCreatedAt=ref(false); //是否显示创建时间
         const displayModifiedAt=ref(true); //是否显示修改时间
         const maxColumn=ref(200); //匹配结果行的最大显示长度,过长将被省略显示
+        const isPipMode=ref(false); //是否启用了pip模式
         const items= ref([
             { include: true, type: 'ada', content: '*.adb *.ads' },
             { include: true, type: 'agda', content: '*.agda *.lagda' },
@@ -652,7 +653,7 @@ export default {
                 //alert('【文件类别】未指定，将搜索所有类别的文件，速度较慢！\n\n如需终止搜索，请关闭本程序。\n\n请耐心等待！');
                 showCustomAlert();
             }
-         
+            isPipMode.value=false;
             isDone.value=false;
 
             let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
@@ -664,6 +665,7 @@ export default {
             preFile.value = "";//reset preFile before running new command
             if (ptrn.length > 1 && !regexMode.value ) {
                 cmdStatus.value = "管道模式中(较耗时)...";
+                isPipMode.value=true;
             }else if (searchFilename.value){
                 cmdStatus.value = "文件名搜索中...";
             }else{
@@ -729,7 +731,8 @@ export default {
                 let ptrn = t.filter(item => item.trim() !== '');//remove empty string
 
                 if (ptrn.length > 1 && regexMode.value === false) {                    
-                    cmdStatus.value +="->("+output.value.length + ")->完成" ;
+                    //cmdStatus.value +="->("+output.value.length + ")->完成" ;
+                    cmdStatus.value += "->完成" ;
                 }else{
                     cmdStatus.value = event.payload;
                 }
@@ -804,6 +807,7 @@ export default {
             //end 新加
             regexMode,
             isDone,
+            isPipMode,
             displayCreatedAt,
             displayModifiedAt,
             maxColumn,

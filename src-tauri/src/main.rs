@@ -31,6 +31,7 @@ use std::process::{Command, ExitStatus};
 const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2026, 12, 30);
 const PIP_SEARCH_MAX_HITS: usize = 3; // pip search每个关键字会记录的最大结果数
 const MAX_CONTENT_SIZE: usize = 3000; // 命中记录Content字段最大长度
+const COMMON_EXT:&str="*.docx *.doc *.odt *.rtf *.pages *.wps *.epub *.pdf *.txt *.csv *.xml *.md *.srt *.eml *.sub *.sql *.html *.htm *.xhtml *.mobi *.azw *.azw3 *.tex *.vtt";
 
 #[tauri::command]
 fn goto_folder(folderPath: &str) {
@@ -91,6 +92,11 @@ struct FileRecord {
     file_path: String,
     content: String,
 }
+#[derive(Clone)]
+struct PipKeywordRecord {
+    keyword: String,
+    hits: usize,
+}
 #[tauri::command]
 async fn run_rg_command(
     window: tauri::Window,
@@ -125,6 +131,8 @@ async fn run_rg_command(
     let mut search_hidden_str = " ";
     let max_depth_str = " -d ".to_string() + maxDepth.to_string().as_str() + " ";
     let mut search_binary_str = " ";
+    let mut pip_keyword_records: Vec<PipKeywordRecord> = Vec::new();
+
     // -i 忽略大小写
     // --glob-case-insensitive 忽略文件名大小写
     let common_args = " -i --max-columns-preview --glob-case-insensitive ";
@@ -132,6 +140,7 @@ async fn run_rg_command(
         .split_whitespace()
         .map(|s| s.to_string())
         .collect();
+
     //let mut exclude_not_common_str=" -g '!*.[zZ][iI][pP]' -g '!*.[rR][aA][rR]' -g '!*.gz' -g '!*.tgz' -g '!*.arj' -g '!*.7z' -g '!*.tar' -g '!*.bz2' -g '!*.tbz2' -g '!*.Z' -g '!*.lzh' -g '!*.ace' -g '!*.jar' -g '!*.zst' -g '!*.db' -g '!*.[mM][pP]4' -g '!*.avi' -g '!*.mkv' -g '!*.[mM][pP]3' -g '!*.[jJ][pP][gG]' -g '!*.[jJ][pP][eE][gG]' -g '!*.[bB][mM][pP]' -g '!*.[pP][nN][gG]' -g '!*.[gG][iI][fF]'  -g '!*.tiff' -g '!*.raw' -g '!*.svg' -g '!*.psd' -g '!*.eps' -g '!*.sqlite' ";
     let mut exclude_not_common_str=" -g !*.[zZ][iI][pP] -g !*.[rR][aA][rR] -g !*.gz -g !*.tgz -g !*.arj -g !*.7z -g !*.tar -g !*.bz2 -g !*.tbz2 -g !*.Z -g !*.lzh -g !*.ace -g !*.jar -g !*.zst -g !*.db -g !*.[mM][pP]4 -g !*.avi -g !*.mkv -g !*.[mM][pP]3 -g !*.[jJ][pP][gG] -g !*.[jJ][pP][eE][gG] -g !*.[bB][mM][pP] -g !*.[pP][nN][gG] -g !*.[gG][iI][fF]  -g !*.tiff -g !*.raw -g !*.svg -g !*.psd -g !*.eps -g !*.sqlite ";
 
@@ -139,14 +148,6 @@ async fn run_rg_command(
     window.emit("get-os", OS.to_string()).unwrap();
     println!("OS:{}", OS);
     println!("maxColumn:{}", maxColumn);
-    //if regexMode {
-    //    println!("Regex:{}", re.to_string());
-    //    ptrn_str = format!(" --engine=auto -e  {} ", searchPattern);
-    //} else {
-    //    if keywords.len() > 0 {
-    //        ptrn_str = " -F ".to_string() + keywords[0].as_str() + " ";
-    //    }
-    //}
 
     if dispHitCount {
         disp_hitcount_str = " --count-matches ";
@@ -211,21 +212,12 @@ async fn run_rg_command(
         rga_args.push("-i".to_string());
         rga_args.push("--glob-case-insensitive".to_string());
     }
-    //rga_str += " --no-messages ";
     rga_args.push("--no-messages".to_string());
 
     // 路径中可能有空格，需要转义
     rga_args.push(searchPath);
-    //rga_args.push(searchPath.replace(" ", "\\ "));
-
-    //rga_str += searchPath.replace(" ", "\\ ").as_str(); // 路径中可能有空格，需要转义
-    //替换单引号，windows不需要单引号，linux需要
-    // if OS == "windows" {
-    //     rga_str = rga_str.replace('\'', "");
-    // }
 
     println!("rga_str:{:?}", rga_args);
-    //println!("Running command:rga {}", rga_str);
     // re用于文件名搜索的模式匹配
     if searchFilename && searchPattern.trim().len() > 0 {
         re = match Regex::new(searchPattern) {
@@ -251,7 +243,7 @@ async fn run_rg_command(
             window
                 .emit(
                     "progress",
-                    Some("->[".to_string() + keywords[0].as_str() + "]... "),
+                    Some("[管道搜索]->[".to_string() + keywords[0].as_str() + "]... "),
                 )
                 .expect("Failed to send completed message");
         }
@@ -273,28 +265,6 @@ async fn run_rg_command(
             .spawn()
             .expect("Failed to start rga command");
 
-        // if !output.status.success() {
-        //     window
-        //         .emit("error", String::from_utf8_lossy(&output.stderr).to_string())
-        //         .unwrap();
-        //     return;
-        // }
-        // let mut child = if OS == "windows" {
-        //     Command::new("rga")
-        //         .args(split_args(&rga_str))
-        //         // windows下需要设置不显示命令行窗口
-        //         .creation_flags(0x08000000) // CREATE_NO_WINDOW
-        //         .stdout(Stdio::piped())
-        //         .spawn()
-        //         .expect("Failed to start rga command")
-        // } else {
-        //     Command::new("rga")
-        //         .args(split_args(&rga_str))
-        //         .stdout(Stdio::piped())
-        //         .spawn()
-        //         .expect("Failed to start rga command")
-        // };
-
         println!("Child process started.");
         let mut file_list: Vec<FileRecord> = Vec::new();
 
@@ -303,7 +273,15 @@ async fn run_rg_command(
             let mut pre_path = String::new(); // 前一个文件路径
             let mut pre_content = String::new(); // 前一个文件内容
             let mut pip_content_count = 0; //pip_search时，前一文件累计content追加预览数
-
+                                           //初始化pip_keyword_records
+            if keywords.len() > 1 && !regexMode {
+                for keyword in keywords.clone() {
+                    pip_keyword_records.push(PipKeywordRecord {
+                        keyword: keyword,
+                        hits: 0,
+                    });
+                }
+            }
             let mut record = Record {
                 hit_count: 0,
                 path: String::new(),
@@ -363,18 +341,17 @@ async fn run_rg_command(
                                         + pre_content.as_str()
                                         + "\n",
                                 });
+                                // 第一关键字记录数更新
+                                pip_keyword_records[0].hits = pip_keyword_records[0].hits + 1;
+                                // 更新进度到前端
+                                pip_progress_update(window.clone(), &pip_keyword_records, 0);
                                 // 追加了一次命中，重置变量
                                 pip_content_count = 1;
                                 pre_path = path;
                                 pre_content = content.clone() + "\n";
                             } else {
                                 // 同一文件，最多追加3个命中内容
-                                // let len = file_list.len();
-                                // if pip_content_count < PIP_SEARCH_MAX_HITS {
-                                //     file_list[len - 1].content = file_list[len - 1].content.clone()
-                                //         + content.as_str()
-                                //         + "\n";
-                                // }
+
                                 if pip_content_count < PIP_SEARCH_MAX_HITS {
                                     pre_content =
                                         pre_content.clone() + content.clone().as_str() + "\n";
@@ -382,7 +359,9 @@ async fn run_rg_command(
                                 pip_content_count = pip_content_count + 1;
                             }
                         } else {
-                            println!("Line: {}", line.as_str());
+                            //正常全文搜索
+
+                            //println!("Line: {}", line.as_str());
                             let (path, content) = split_path_content(line.as_str());
                             if path.len() == 0 {
                                 continue;
@@ -405,7 +384,7 @@ async fn run_rg_command(
                                                     .content
                                                     .replace(
                                                         "omitted end of long line",
-                                                        "过长省略...",
+                                                        "行尾过长略...",
                                                     )
                                                     .replace(
                                                         "Omitted long matching line",
@@ -484,13 +463,13 @@ async fn run_rg_command(
 
         // 如果是空格分隔的多关键字，则启用pip_search
         if keywords.len() > 1 && !regexMode && file_list.len() > 0 {
-            let s = "->[".to_string()
-                + keywords[0].as_str()
-                + "]->("
-                + file_list.len().to_string().as_str()
-                + ")";
+            // let s = "[管道搜索]->[".to_string()
+            //     + keywords[0].as_str()
+            //     + "]->("
+            //     + file_list.len().to_string().as_str()
+            //     + ")";
 
-            emit_signal(window.clone(), "progress", s.as_str());
+            //emit_signal(window.clone(), "progress", s.as_str());
 
             if file_list.len() > 0 {
                 let status = pip_search(
@@ -502,9 +481,10 @@ async fn run_rg_command(
                         + maxColumn.to_string().as_str()
                         + " -m "
                         + maxCount.to_string().as_str(),
+                    pip_keyword_records,
                 );
                 println!("Command finished with status: {}", status.code().unwrap());
-                emit_completed_signal(window, status);
+                emit_completed_signal(window.clone(), status);
             }
         } else {
             let status = child.wait().expect("Command wasn't running");
@@ -530,14 +510,30 @@ async fn run_rg_command(
             println!("Command finished with status: {}", status.code().unwrap());
             emit_completed_signal(window, status);
         }
-        // 清除全局变量中的子进程句柄
-        // unsafe {
-        //     CHILD_PROCESS = None;
-        // }
     })
     .await
     .map_err(|e| e.to_string())?;
     Ok(())
+}
+fn pip_progress_update(
+    window: tauri::Window,
+    pip_keywords_records: &Vec<PipKeywordRecord>,
+    index: usize,
+) {
+    let mut s = "[管道搜索]->[".to_string()
+        + pip_keywords_records[0].keyword.as_str()
+        + "]->("
+        + pip_keywords_records[0].hits.to_string().as_str()
+        + ")";
+    for i in 1..index + 1 {
+        s = s.clone()
+            + "->["
+            + pip_keywords_records[i].keyword.as_str()
+            + "]->("
+            + pip_keywords_records[i].hits.to_string().as_str()
+            + ")";
+    }
+    emit_signal(window.clone(), "progress", s.as_str());
 }
 
 // 用于三个及以上关键字的搜索采用管道过滤法，即前一个关键字的输出作为后一个关键字的输入
@@ -547,6 +543,7 @@ fn pip_search(
     mut file_list: Vec<FileRecord>,
     mut rg_process: Child,
     addtional_args: String,
+    mut pip_keyword_records: Vec<PipKeywordRecord>,
 ) -> ExitStatus {
     // keywords从第二个元素开始，第一个元素已搜索
     if keywords.len() == 1 || file_list.len() == 0 {
@@ -651,6 +648,8 @@ fn pip_search(
                                 //+ line.as_str(),
                             )
                             .unwrap();
+                        pip_keyword_records[i].hits = pip_keyword_records[i].hits + 1;
+                        pip_progress_update(window.clone(), &pip_keyword_records, i);
                     } else {
                         // 不是最后一个关键字，则将Filelist结果传递给下一个关键字
                         //let (_, content) = split_path_content(line.as_str());
@@ -665,6 +664,10 @@ fn pip_search(
                                 + lines_str.as_str()
                                 + "\n",
                         });
+                        // 关键字命中数更新
+                        pip_keyword_records[i].hits = pip_keyword_records[i].hits + 1;
+                        // 更新进度到前端
+                        pip_progress_update(window.clone(), &pip_keyword_records, i);
                     }
                     //}
                     //Err(err) => eprintln!("Error reading line: {}", err),
@@ -697,11 +700,14 @@ fn pip_search(
         file_list = next_file_list;
 
         if file_list.len() > 0 {
-            key = key.clone() + "->(" + file_list.len().to_string().as_str() + ")";
-            window
-                .emit("progress", Some(key.clone()))
-                .expect("Failed to send completed message");
+            // 更新进度信息
+            pip_progress_update(window.clone(), &pip_keyword_records, i);
+            // key = key.clone() + "->(" + file_list.len().to_string().as_str() + ")";
+            // window
+            //     .emit("progress", Some(key.clone()))
+            //     .expect("Failed to send completed message");
         } else {
+            pip_progress_update(window.clone(), &pip_keyword_records, i);
             break;
         }
         // 输出最终过滤结果
@@ -710,7 +716,8 @@ fn pip_search(
         .wait()
         .expect("Failed to pipe output from rga process")
 }
-//return (created_at, modified_at)
+
+// return (created_at, modified_at)
 fn get_filetime(file_path: &str) -> (String, String) {
     println!("get_filetime: file_path:{}", file_path);
     let metadata = fs::metadata(file_path).expect("Failed to get metadata");
