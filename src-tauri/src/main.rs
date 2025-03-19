@@ -31,7 +31,8 @@ use std::process::{Command, ExitStatus};
 const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2026, 12, 30);
 const PIP_SEARCH_MAX_HITS: usize = 3; // pip search每个关键字会记录的最大结果数
 const MAX_CONTENT_SIZE: usize = 3000; // 命中记录Content字段最大长度
-const COMMON_EXT:&str="*.docx *.doc *.odt *.rtf *.pages *.wps *.epub *.pdf *.txt *.csv *.xml *.md *.srt *.eml *.sub *.sql *.html *.htm *.xhtml *.mobi *.azw *.azw3 *.tex *.vtt";
+const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml  *.srt *.eml *.sub  *.tex";
+//const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml *.epub *.srt *.eml *.sub *.sql *.mobi *.azw *.azw3 *.tex *.vtt";
 
 #[tauri::command]
 fn goto_folder(folderPath: &str) {
@@ -110,8 +111,9 @@ async fn run_rg_command(
     searchHidden: bool,     // 是否搜索隐藏文件
     maxDepth: u32,          // 最大搜索深度
     searchBinary: bool,     // 是否搜索二进制文件
-    excludeNotCommon: bool, // 是否排除常见压缩文件
-    maxColumn: u32,         // 匹配结果最大显示长度，超过将被省略显示
+    //excludeNotCommon: bool, // 是否排除常见压缩文件
+    searchAll: bool, // 是否搜索所有文件,但不包含隐藏和二进制文件
+    maxColumn: u32,  // 匹配结果最大显示长度，超过将被省略显示
 ) -> Result<(), String> {
     // 判断软件是否过期
     let current_date = Local::now().naive_local().date();
@@ -141,8 +143,7 @@ async fn run_rg_command(
         .map(|s| s.to_string())
         .collect();
 
-    //let mut exclude_not_common_str=" -g '!*.[zZ][iI][pP]' -g '!*.[rR][aA][rR]' -g '!*.gz' -g '!*.tgz' -g '!*.arj' -g '!*.7z' -g '!*.tar' -g '!*.bz2' -g '!*.tbz2' -g '!*.Z' -g '!*.lzh' -g '!*.ace' -g '!*.jar' -g '!*.zst' -g '!*.db' -g '!*.[mM][pP]4' -g '!*.avi' -g '!*.mkv' -g '!*.[mM][pP]3' -g '!*.[jJ][pP][gG]' -g '!*.[jJ][pP][eE][gG]' -g '!*.[bB][mM][pP]' -g '!*.[pP][nN][gG]' -g '!*.[gG][iI][fF]'  -g '!*.tiff' -g '!*.raw' -g '!*.svg' -g '!*.psd' -g '!*.eps' -g '!*.sqlite' ";
-    let mut exclude_not_common_str=" -g !*.[zZ][iI][pP] -g !*.[rR][aA][rR] -g !*.gz -g !*.tgz -g !*.arj -g !*.7z -g !*.tar -g !*.bz2 -g !*.tbz2 -g !*.Z -g !*.lzh -g !*.ace -g !*.jar -g !*.zst -g !*.db -g !*.[mM][pP]4 -g !*.avi -g !*.mkv -g !*.[mM][pP]3 -g !*.[jJ][pP][gG] -g !*.[jJ][pP][eE][gG] -g !*.[bB][mM][pP] -g !*.[pP][nN][gG] -g !*.[gG][iI][fF]  -g !*.tiff -g !*.raw -g !*.svg -g !*.psd -g !*.eps -g !*.sqlite ";
+    //let mut exclude_not_common_str=" -g !*.[zZ][iI][pP] -g !*.[rR][aA][rR] -g !*.gz -g !*.tgz -g !*.arj -g !*.7z -g !*.tar -g !*.bz2 -g !*.tbz2 -g !*.Z -g !*.lzh -g !*.ace -g !*.jar -g !*.zst -g !*.db -g !*.[mM][pP]4 -g !*.avi -g !*.mkv -g !*.[mM][pP]3 -g !*.[jJ][pP][gG] -g !*.[jJ][pP][eE][gG] -g !*.[bB][mM][pP] -g !*.[pP][nN][gG] -g !*.[gG][iI][fF]  -g !*.tiff -g !*.raw -g !*.svg -g !*.psd -g !*.eps -g !*.sqlite ";
 
     // 告知前端OS情况
     window.emit("get-os", OS.to_string()).unwrap();
@@ -161,9 +162,10 @@ async fn run_rg_command(
     if searchBinary {
         search_binary_str = " -a ";
     }
-    if !excludeNotCommon || filenamePattern.trim().len() > 0 {
-        exclude_not_common_str = " ";
-    }
+
+    // if !excludeNotCommon || filenamePattern.trim().len() > 0 {
+    //     exclude_not_common_str = " ";
+    // }
 
     // 检查路径是否是 C:或D:格式，如果是，则自动添加反斜杠
     let r = Regex::new(r"^[A-Za-z]:$").unwrap();
@@ -196,8 +198,22 @@ async fn run_rg_command(
     }
     rga_args.push("-M".to_string());
     rga_args.push(maxColumn.to_string());
-    rga_args.append(&mut split_args(&exclude_not_common_str));
-    rga_args.append(&mut split_args(&file_patrn_str));
+
+    // 处理filename pattern
+    // 如果如果不是搜索所有格式，则按用户指定文件扩展名或常用扩展名搜索，否则搜索所有格式，即不指定文件扩展名
+    if !searchAll {
+        // 指定了文件名模式，则只搜索匹配的文件名
+        if filenamePattern.trim().len() > 0 {
+            rga_args.append(&mut split_args(&file_patrn_str));
+        } else {
+            // 否则搜索所有常用格式
+            rga_args.append(&mut split_args(
+                generate_filename_pattern(COMMON_EXT).as_str(),
+            ));
+        }
+    }
+    //rga_args.append(&mut split_args(&exclude_not_common_str));
+    //rga_args.append(&mut split_args(&file_patrn_str));
 
     //如果仅搜索文件名，则重新制作参数，添加 --files 参数
     if searchFilename {
@@ -243,7 +259,7 @@ async fn run_rg_command(
             window
                 .emit(
                     "progress",
-                    Some("[管道搜索]->[".to_string() + keywords[0].as_str() + "]... "),
+                    Some("[管道搜索]->[".to_string() + keywords[0].as_str() + "]..."),
                 )
                 .expect("Failed to send completed message");
         }
@@ -295,7 +311,7 @@ async fn run_rg_command(
                     Ok(line) => {
                         //println!("Line: {}", line);
                         if searchFilename {
-                            println!("Filename :{}", line);
+                            //println!("Filename :{}", line);
                             if let Some(filename) = Path::new(&line)
                                 .file_name()
                                 .and_then(|os_str| os_str.to_str())
@@ -571,7 +587,7 @@ fn pip_search(
 
         for file in file_list {
             let file2 = file.clone();
-            println!("在文件 {} 中搜索: {}", file.file_path, keywords[i]);
+            //println!("在文件 {} 中搜索: {}", file.file_path, keywords[i]);
             // 对于每个文件，使用 rg 进行进一步的关键字过滤
             #[cfg(windows)]
             let mut rg_process = Command::new("rga")
@@ -719,7 +735,7 @@ fn pip_search(
 
 // return (created_at, modified_at)
 fn get_filetime(file_path: &str) -> (String, String) {
-    println!("get_filetime: file_path:{}", file_path);
+    //println!("get_filetime: file_path:{}", file_path);
     let metadata = fs::metadata(file_path).expect("Failed to get metadata");
     let mut created_at = String::new();
     let mut modified_at = String::new();

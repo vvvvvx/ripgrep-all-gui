@@ -12,7 +12,8 @@
                     <span class="input-group-text dark-mode mt-2 ht-45 d-flex">文件类别</span>
                     <!--新加Begin-->
                     <div class="form-control dropdown mt-2 ht-45  flex-column" style="padding: 0%;" @click="handleDropdownClick"> 
-                        <input  class=" dark-mode mt-0  w-100 ht-43" ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="默认空，搜所有类别，较慢。可输：*.zip  *.pdf  ==>全文关键字在右框输入" title="文件类别，支持通配符。&#10;将只搜索指定类别的所有文件&#10;&#10;用空格分隔多个类别。默认为空，即搜索所有类别，速度较慢。&#10;不建议留空，明确文件类别将成倍提高搜索速度。&#10;&#10;例如：&#10;*.docx *.pdf  表示只搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*.*  表示只搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示只搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示搜索会排除扩展名为 txt 的文件。&#10;!*研究报告*.* 表示搜索会排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示搜索会排除文件名包含“研究报告”的 pdf 文件。">
+                        <input  class=" dark-mode mt-0  w-100 ht-43" ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="默认空，搜常用类别。例：*.zip  *.pdf 。指定类别，速度倍增。" 
+                        title="【文件类别】，即在哪些类别的文件中搜索内容，通常由扩展名决定。&#10;&#10;默认空，即搜常用类别：Office PDF Markdown Txt 网页 eml LaTeX等。&#10;&#10;不建议留空，明确文件类别，可成倍提高搜索速度。&#10;&#10;可空格分隔多个类别。&#10;通配符*表任意字符。例：&#10;*.docx *.pdf  表示只搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*  表示只搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示只搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示搜索会排除扩展名为 txt 的文件。&#10;!*研究报告* 表示搜索会排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示搜索会排除文件名包含“研究报告”的 pdf 文件。">
                         <div v-if="filteredItems.length" class="dropdown-list"  title="✔ Include 包含 此特征&#9;✘ Exclude 排除 此特征&#10;&#10;点击复选框/Ctrl+Space切换&#10;&#10;上下方向键选中，鼠标点击/Enter确认">
 
                     <!---<button class="btn btn-primary  pt-2 ht-30" @click="openFolderDialog" title="点击选择搜索根路径">添加</button> -->
@@ -58,9 +59,9 @@
                 <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">搜二进制文件</label>
                 <input type="checkbox" class="form-check-input mt-2" id="search-binary" v-model="searchBinary" />
             </div>
-            <div class="form-check mt-0" style="width: fit-content;" title="排除不常用且耗时的图片、压缩文件、数据库、视频文件">
-                <label class="form-check-label mt-0 pt-0 ht-45" for="">排除冷门耗时文件</label>
-                <input type="checkbox" class="form-check-input mt-2"  v-model="excludeNotCommon" />
+            <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll" title="搜索任何格式的文件，但不包括隐藏文件或二进制文件。&#10;&#10;勾选此项，速度最慢。&#10;&#10;勾选此项，将忽略用户指定的文件类别，执行最全面的搜索。">
+                <label class="form-check-label mt-0 pt-0 ht-45" for="">搜任何文件</label>
+                <input type="checkbox" class="form-check-input mt-2"   v-model="searchAll" />
             </div>
             <div class="input-group mt-0 " style="width: fit-content;display: inline-flex;padding-left:0px;padding-right:0px;"
                 title="单个文件中出现的关键字次数达到[最大匹配次数]后，程序将不再搜索此文件，以提高效率。&#10;&#10;0 表示无限制。&#10;过大可能会导致搜索时间过长。">
@@ -142,14 +143,14 @@
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
-            <span>Version:1.1.4 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
+            <span>Version:1.2.0 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com</span>
         </div>
         </div>
     </div>
     <div id="alertBox" class="custom-alert" >
-        <span style=" font-weight: bold;" class="fs-5 text-warning ">【文件类别】未指定</span><br><br>
-      将搜索所有类别的文件，速度较慢！ 请耐心等待...<br>
-      指定文件类型，速度成倍提升！<br><br>
+        <span style=" font-weight: bold;" class="fs-5 text-warning ">{{ searchAll ? '全面搜索，极耗时！' :'【文件类别】未指定' }} </span><br><br>
+      {{ searchAll ? '将搜索【所有类别】的文件，速度最慢，请耐心等待...':'将搜索所有【常见类别】的文件，速度较慢！ 请耐心等待...'}}<br>
+      指定文件类别，速度成倍提升！<br><br>
 
       <span class="red-text">如需终止漫长搜索，请关闭本程序后重开。</span>
       
@@ -227,7 +228,8 @@ export default {
         const searchHidden = ref(false); // 是否搜索隐藏文件
         const maxDepth = ref(100); // 目录遍历深度
         const searchBinary = ref(false); // 是否把二进制文件作为文本搜索
-        const excludeNotCommon=ref(true); // 是否排除不常用且耗时的图片、压缩文件、数据库、视频文件
+        //const excludeNotCommon=ref(true); // 是否排除不常用且耗时的图片、压缩文件、数据库、视频文件
+        const searchAll = ref(false); // 是否搜索所有文件
         ////begin 新加
         const isDone=ref(true); //搜索是否执行结束
         const displayCreatedAt=ref(false); //是否显示创建时间
@@ -607,6 +609,16 @@ export default {
 
             scrollToTop();
         };
+        const toggleSearchAll=()=>{
+            if(!searchAll.value){
+                searchAll.value=true;
+                filenamePattern.value="";
+                getById("inputFilePattern").placeholder="勾选[搜任何文件]，忽略用户输入类别。执行全面搜索，速度最慢！";
+            }else{
+                searchAll.value=false;
+                getById("inputFilePattern").placeholder="默认空，搜常用类别。例：*.zip  *.pdf 。指定类别，速度倍增。";
+            }
+        };
         const runCommand =async () => {
 
             if (!isDone.value) {
@@ -649,7 +661,8 @@ export default {
                 return;
             }
             
-            if(filenamePattern.value.trim() === '') {
+            //if(filenamePattern.value.trim() === '') {
+            if(searchAll.value){
                 //alert('【文件类别】未指定，将搜索所有类别的文件，速度较慢！\n\n如需终止搜索，请关闭本程序。\n\n请耐心等待！');
                 showCustomAlert();
             }
@@ -665,7 +678,7 @@ export default {
             preFile.value = "";//reset preFile before running new command
             if (ptrn.length > 1 && !regexMode.value ) {
                 cmdStatus.value = "管道模式中(较耗时)...";
-                isPipMode.value=true;
+                //isPipMode.value=true;
             }else if (searchFilename.value){
                 cmdStatus.value = "文件名搜索中...";
             }else{
@@ -686,7 +699,8 @@ export default {
                     searchHidden: searchHidden.value , 
                     maxDepth: Number(maxDepth.value) , 
                     searchBinary: searchBinary.value ,
-                    excludeNotCommon: excludeNotCommon.value,
+                    //excludeNotCommon: excludeNotCommon.value,
+                    searchAll: searchAll.value,
                     maxColumn:Number(maxColumn.value), });
             } catch (e) {
                 console.error(e);
@@ -747,7 +761,11 @@ export default {
             });
             listen('progress', event => {
                 cmdStatus.value = event.payload;
-                console.log(event.payload);
+
+                if(cmdStatus.value.slice(-3)!="...") {
+                    isPipMode.value=true;
+                }
+                //console.log("cmdsStatus:",event.payload.slice(-3));
                 //alert(OS);
             });
             listen('overdate', event => {
@@ -801,9 +819,10 @@ export default {
             handleDropdownClick,
             clearFilePattern,
             handleSearchKeydown,
-            excludeNotCommon,
+            //excludeNotCommon,
             closeCustomAlert,
             closeRuningAlert,
+            toggleSearchAll,
             //end 新加
             regexMode,
             isDone,
@@ -811,6 +830,7 @@ export default {
             displayCreatedAt,
             displayModifiedAt,
             maxColumn,
+            searchAll,
         };
     }
 
