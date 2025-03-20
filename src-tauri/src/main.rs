@@ -93,7 +93,7 @@ struct FileRecord {
     file_path: String,
     content: String,
 }
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct PipKeywordRecord {
     keyword: String,
     hits: usize,
@@ -343,7 +343,7 @@ async fn run_rg_command(
                                 pre_path = path.clone();
                                 pre_content = content.clone() + "\n";
                                 pip_content_count = 1;
-                                first_line = false;
+                                //first_line = false;
                             }
                             if path != pre_path {
                                 //把新文件加入file_list
@@ -366,8 +366,12 @@ async fn run_rg_command(
                                 pre_path = path;
                                 pre_content = content.clone() + "\n";
                             } else {
+                                // 避免第一个文件内容重复
+                                if first_line {
+                                    first_line = false;
+                                    continue;
+                                }
                                 // 同一文件，最多追加3个命中内容
-
                                 if pip_content_count < PIP_SEARCH_MAX_HITS {
                                     pre_content =
                                         pre_content.clone() + content.clone().as_str() + "\n";
@@ -443,7 +447,8 @@ async fn run_rg_command(
             }
             //循环结束，处理最后一个文件
             // 如果是pip_search
-            if keywords.len() > 1 && !regexMode {
+            if keywords.len() > 1 && !regexMode && pre_path.trim().len() > 0 {
+                //把最后一个文件加入file_list
                 file_list.push(FileRecord {
                     file_path: pre_path,
                     content: "————————————————".to_string()
@@ -454,6 +459,7 @@ async fn run_rg_command(
                         + pre_content.as_str()
                         + "\n",
                 });
+                pip_keyword_records[0].hits = pip_keyword_records[0].hits + 1;
             }
             if record.hit_count > 0 {
                 window
@@ -519,6 +525,9 @@ async fn run_rg_command(
                     None => {}
                 }
 
+                if keywords.len() > 1 && !regexMode && file_list.len() == 0 {
+                    pip_progress_update(window.clone(), &pip_keyword_records, 0);
+                }
                 emit_completed_signal(window, status);
                 return;
             }
@@ -533,19 +542,19 @@ async fn run_rg_command(
 }
 fn pip_progress_update(
     window: tauri::Window,
-    pip_keywords_records: &Vec<PipKeywordRecord>,
+    pip_keyword_records: &Vec<PipKeywordRecord>,
     index: usize,
 ) {
     let mut s = "[管道搜索]".to_string();
-
+    //println!("pip_keywords_records: {:?}", pip_keyword_records);
     for i in 0..index + 1 {
         s = s.clone()
             + "->["
-            + pip_keywords_records[i].keyword.as_str()
+            + pip_keyword_records[i].keyword.as_str()
             + "]->("
-            + pip_keywords_records[i].hits.to_string().as_str()
+            + pip_keyword_records[i].hits.to_string().as_str()
             + ")";
-        if pip_keywords_records[i].hits == 0 {
+        if pip_keyword_records[i].hits == 0 {
             break;
         }
     }
@@ -698,11 +707,12 @@ fn pip_search(
                         let mut reader = io::BufReader::new(stderr);
                         let mut lines = String::new();
                         let _ = reader.read_to_string(&mut lines).unwrap();
-
-                        eprintln!(
-                            "Pip_srearch() running rga process Error : {}",
-                            lines.as_str()
-                        );
+                        if lines.trim().len() > 0 {
+                            eprintln!(
+                                "Pip_srearch() running rga process Error : {}",
+                                lines.as_str()
+                            );
+                        }
                     }
                     None => {}
                 }
