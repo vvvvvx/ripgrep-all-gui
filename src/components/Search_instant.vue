@@ -143,7 +143,8 @@
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
-            <span>Version: {{ curVersion }} &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com&emsp;Download：https://gitee.com/vvvvvx/fast-full-text-search</span>
+            <!--<span>Version: {{ curVersion }} &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com&emsp;Download：https://gitee.com/vvvvvx/fast-full-text-search</span> -->
+            <span> Developed by Viaco.&emsp; Email : viaco.xu@qq.com&emsp;</span><span :class="[(curVersion!==latestVersion && latestVersion!='') ?  'blink':'']" v-html="versionText" ></span>
         </div>
         </div>
     </div>
@@ -180,7 +181,7 @@
 
 <script>
 import { invoke } from '@tauri-apps/api/tauri';
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref,computed } from 'vue';
 import { listen } from '@tauri-apps/api/event';
 import { tr } from 'vuetify/locale';
 
@@ -247,6 +248,7 @@ export default {
         const isPipMode=ref(false); //是否启用了pip模式
         const curVersion=ref('v1.3.0'); //当前版本号
         const latestVersion=ref(''); //最新版本号
+        const versionText=computed(()=>{return ((curVersion.value.toLowerCase()!=latestVersion.value.toLowerCase()) && latestVersion.value!='') ?  `<a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank" style="text-decoration:none;color:green;">有新版本，点我下载！</a>`:`<a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank" style="text-decoration:none;color:white;">Version: ${curVersion.value}</a>` ;}); //版本号显示文本
         const items= ref([
             { include: true, type: 'ada', content: '*.adb *.ads' },
             { include: true, type: 'agda', content: '*.agda *.lagda' },
@@ -540,6 +542,8 @@ export default {
         const closeNewVersionAlert=()=>{
           getById("alertNewVersionBox").style.display="none";
         };
+
+
          
         const sortOutputByHitCount = () => {
             let hc = getById("sort-by-hit-count");
@@ -739,18 +743,15 @@ export default {
             //设置默认搜索目录
             getHomeDir();
 
-
             try {
-
                 latestVersion.value = await invoke('check_update');
-                if(curVersion.value.toLowerCase()  < latestVersion.value.toLowerCase()){
-                    //alert("有新版本发布！\n当前版本："+curVersion.value+"，最新版本："+latestVersion.value+"\n请前往 https://gitee.com/vvvvvx/fast-full-text-search/releases 下载最新版本。");
-                    getById("alertNewVersionBox").style.display="block";
-                }
+                // if(curVersion.value.toLowerCase()  < latestVersion.value.toLowerCase()){
+                //     //alert("有新版本发布！\n当前版本："+curVersion.value+"，最新版本："+latestVersion.value+"\n请前往 https://gitee.com/vvvvvx/fast-full-text-search/releases 下载最新版本。");
+                //     getById("alertNewVersionBox").style.display="block";
+                // }
             } catch (e) {
                 console.error(e);
             }
-
 
             listen('rg-output', event => {    
                 // event.payload格式：是record数组
@@ -862,6 +863,7 @@ export default {
             searchAll,
             latestVersion,
             curVersion,
+            versionText,
 
         };
     }
