@@ -144,7 +144,7 @@
         <div class="row justify-content-end">
             <div class="col-auto">
             <!--<span>Version: {{ curVersion }} &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com&emsp;Download：https://gitee.com/vvvvvx/fast-full-text-search</span> -->
-            <span> Developed by Viaco.&emsp; Email : viaco.xu@qq.com&emsp;</span><span :class="[(curVersion!==latestVersion && latestVersion!='') ?  'blink':'']" v-html="versionText" ></span>
+            <span title="点我访问软件主页，可提Bug或建议。"> <a href="https://gitee.com/vvvvvx/fast-full-text-search" target="_blank">Developed by Viaco.</a>&emsp; Email : viaco.xu@qq.com&emsp;</span><span :class="[(curVersion!==latestVersion && latestVersion!='') ?  'blink':'']" v-html="versionText" :title="versionTitle"></span>
         </div>
         </div>
     </div>
@@ -246,9 +246,11 @@ export default {
         const displayModifiedAt=ref(true); //是否显示修改时间
         const maxColumn=ref(200); //匹配结果行的最大显示长度,过长将被省略显示
         const isPipMode=ref(false); //是否启用了pip模式
-        const curVersion=ref('v1.3.0'); //当前版本号
+        const curVersion=ref('v1.3.1'); //当前版本号
         const latestVersion=ref(''); //最新版本号
         const versionText=computed(()=>{return ((curVersion.value.toLowerCase()!=latestVersion.value.toLowerCase()) && latestVersion.value!='') ?  `<a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank" style="text-decoration:none;color:green;">有新版本，点我下载！</a>`:`<a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank" style="text-decoration:none;color:white;">Version: ${curVersion.value}</a>` ;}); //版本号显示文本
+        const versionTitle=computed(()=>{return ((curVersion.value.toLowerCase()!=latestVersion.value.toLowerCase()) && latestVersion.value!='') ? `当前版本：${curVersion.value}  最新版本：${latestVersion.value}`:"点击我查看版本更新信息。"})
+
         const items= ref([
             { include: true, type: 'ada', content: '*.adb *.ads' },
             { include: true, type: 'agda', content: '*.agda *.lagda' },
@@ -864,6 +866,7 @@ export default {
             latestVersion,
             curVersion,
             versionText,
+            versionTitle,
 
         };
     }
