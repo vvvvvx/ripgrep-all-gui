@@ -5,7 +5,7 @@
 use open::that;
 use regex::Regex;
 use ripgrepa_gui::myutils::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::env::consts::OS;
 use std::io::{self, BufRead, BufReader, Read};
 //use tauri::window;
@@ -878,6 +878,29 @@ fn emit_signal(window: tauri::Window, signal: &str, message: &str) {
         .expect(format!("Failed to send {} message", signal).as_str());
 }
 
+#[derive(Debug, Deserialize)]
+struct GiteeRelease {
+    tag_name: String,
+}
+#[tauri::command]
+async fn check_update() -> Result<String, String> {
+    use reqwest;
+    //let mut response = String::new();
+    let url = "https://gitee.com/api/v5/repos/vvvvvx/fast-full-text-search/releases/latest";
+    match reqwest::get(url).await {
+        Ok(mut response) => {
+            if let Ok(relese) = response.json::<GiteeRelease>().await {
+                Ok(relese.tag_name)
+            } else {
+                Err("Failed to parse release info from Gitee".to_string())
+            }
+        }
+        Err(e) => {
+            eprintln!("Error getting latest release info from Gitee: {}", e);
+            Err("Failed to get latest release info from Gitee".to_string())
+        }
+    }
+}
 #[tauri::command]
 fn open_file(filePath: &str) {
     println!("file_path:{}", filePath);
@@ -918,6 +941,7 @@ fn main() {
             open_folder_dialog,
             goto_folder,
             get_home_dir,
+            check_update,
             //stop_rg_command
         ])
         .run(tauri::generate_context!())

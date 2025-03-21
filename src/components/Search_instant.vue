@@ -143,7 +143,7 @@
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
-            <span>Version:1.2.2 &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com&emsp;Download：https://gitee.com/vvvvvx/fast-full-text-search</span>
+            <span>Version: {{ curVersion }} &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com&emsp;Download：https://gitee.com/vvvvvx/fast-full-text-search</span>
         </div>
         </div>
     </div>
@@ -236,6 +236,8 @@ export default {
         const displayModifiedAt=ref(true); //是否显示修改时间
         const maxColumn=ref(200); //匹配结果行的最大显示长度,过长将被省略显示
         const isPipMode=ref(false); //是否启用了pip模式
+        const curVersion=ref('v1.3.0'); //当前版本号
+        const latestVersion=ref(''); //最新版本号
         const items= ref([
             { include: true, type: 'ada', content: '*.adb *.ads' },
             { include: true, type: 'agda', content: '*.agda *.lagda' },
@@ -722,9 +724,22 @@ export default {
             }
         };
        
-        onMounted(() => {
+        onMounted(async () => {
             //设置默认搜索目录
             getHomeDir();
+
+
+            try {
+
+                latestVersion.value = await invoke('check_update');
+                if(curVersion.value.toLowerCase()  < latestVersion.value.toLowerCase()){
+                    alert("有新版本发布！\n当前版本："+curVersion.value+"，最新版本："+latestVersion.value+"\n请前往 https://gitee.com/vvvvvx/fast-full-text-search/releases 下载最新版本。");
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+
             listen('rg-output', event => {    
                 // event.payload格式：是record数组
                 // Record{
@@ -832,6 +847,9 @@ export default {
             displayModifiedAt,
             maxColumn,
             searchAll,
+            latestVersion,
+            curVersion,
+
         };
     }
 
