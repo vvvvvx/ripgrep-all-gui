@@ -166,6 +166,15 @@
       <button @click="closeRuningAlert" id="closeRuningAlertBtn" class="btn btn-primary">确定</button>
     
     </div>
+    <div id="alertNewVersionBox" class="custom-alert" >
+      <span style="font-weight: bold;" class="fs-5">有新版本发布！</span><br><br>
+      <span  > 当前版本：{{ curVersion }} &emsp; 最新版本：{{ latestVersion }}</span><br>
+      请前往 <a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank">https://gitee.com/vvvvvx/fast-full-text-search/releases</a> 下载！<br>
+      
+      <br><br>
+      <button @click="closeNewVersionAlert" id="closeNewVersionAlertBtn" class="btn btn-primary">确定</button>
+    
+    </div>
 
 </template>
 
@@ -528,7 +537,9 @@ export default {
         const closeRuningAlert=()=>{
           getById("alertRuningBox").style.display="none";
         };
-
+        const closeNewVersionAlert=()=>{
+          getById("alertNewVersionBox").style.display="none";
+        };
          
         const sortOutputByHitCount = () => {
             let hc = getById("sort-by-hit-count");
@@ -733,7 +744,8 @@ export default {
 
                 latestVersion.value = await invoke('check_update');
                 if(curVersion.value.toLowerCase()  < latestVersion.value.toLowerCase()){
-                    alert("有新版本发布！\n当前版本："+curVersion.value+"，最新版本："+latestVersion.value+"\n请前往 https://gitee.com/vvvvvx/fast-full-text-search/releases 下载最新版本。");
+                    //alert("有新版本发布！\n当前版本："+curVersion.value+"，最新版本："+latestVersion.value+"\n请前往 https://gitee.com/vvvvvx/fast-full-text-search/releases 下载最新版本。");
+                    getById("alertNewVersionBox").style.display="block";
                 }
             } catch (e) {
                 console.error(e);
@@ -838,6 +850,7 @@ export default {
             //excludeNotCommon,
             closeCustomAlert,
             closeRuningAlert,
+            closeNewVersionAlert,
             toggleSearchAll,
             //end 新加
             regexMode,
