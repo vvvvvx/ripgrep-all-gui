@@ -5,6 +5,7 @@
 use open::that;
 use regex::Regex;
 use ripgrepa_gui::myutils::*;
+use serde::Serialize;
 use std::env::consts::OS;
 use std::io::{self, BufRead, BufReader, Read};
 //use tauri::window;
@@ -31,6 +32,7 @@ use std::process::{Command, ExitStatus};
 const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2026, 12, 30);
 const PIP_SEARCH_MAX_HITS: usize = 3; // pip search每个关键字会记录的最大结果数
 const MAX_CONTENT_SIZE: usize = 3000; // 命中记录Content字段最大长度
+const MAX_RESULT_CACHE: usize = 50; // 命中结果缓存最大数量
 const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml  *.srt *.eml *.sub  *.tex";
 //const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml *.epub *.srt *.eml *.sub *.sql *.mobi *.azw *.azw3 *.tex *.vtt";
 
@@ -81,12 +83,22 @@ fn open_folder_dialog() -> String {
 // }
 
 // 搜索命中结果
+#[derive(Clone, Serialize)]
 struct Record {
     hit_count: u32,
-    path: String,
-    content: String,
+    file: String,
     created_at: String,
     modified_at: String,
+    content: String,
+}
+impl Record {
+    fn clear(&mut self) {
+        self.hit_count = 0;
+        self.file.clear();
+        self.content.clear();
+        self.created_at.clear();
+        self.modified_at.clear();
+    }
 }
 #[derive(Clone)]
 struct FileRecord {
@@ -137,7 +149,7 @@ async fn run_rg_command(
 
     // -i 忽略大小写
     // --glob-case-insensitive 忽略文件名大小写
-    let common_args = " -i --max-columns-preview --glob-case-insensitive ";
+    let common_args = " -i --trim --max-columns-preview --glob-case-insensitive ";
     let keywords: Vec<String> = searchPattern
         .split_whitespace()
         .map(|s| s.to_string())
@@ -148,7 +160,6 @@ async fn run_rg_command(
     // 告知前端OS情况
     window.emit("get-os", OS.to_string()).unwrap();
     println!("OS:{}", OS);
-    println!("maxColumn:{}", maxColumn);
 
     if dispHitCount {
         disp_hitcount_str = " --count-matches ";
@@ -233,7 +244,7 @@ async fn run_rg_command(
     // 路径中可能有空格，需要转义
     rga_args.push(searchPath);
 
-    println!("rga_str:{:?}", rga_args);
+    //println!("rga_str:{:?}", rga_args);
     // re用于文件名搜索的模式匹配
     if searchFilename && searchPattern.trim().len() > 0 {
         re = match Regex::new(searchPattern) {
@@ -251,11 +262,13 @@ async fn run_rg_command(
         };
         println!("Filename regex:{}", re);
     }
-
+    use std::time::Instant;
+    let start = Instant::now();
     //std::thread::spawn(move || {
     tokio::task::spawn_blocking(move || {
+        let is_pip_search = keywords.len() > 1 && !regexMode;
         // 如果是空格分隔的多关键字，则启用pip_search ，更新进度
-        if keywords.len() > 1 && !regexMode {
+        if is_pip_search {
             window
                 .emit(
                     "progress",
@@ -285,12 +298,14 @@ async fn run_rg_command(
         let mut file_list: Vec<FileRecord> = Vec::new();
 
         if let Some(stdout) = child.stdout.take() {
-            let reader = io::BufReader::new(stdout);
+            //let reader = io::BufReader::new(stdout);
+            let reader = io::BufReader::with_capacity(1024 * 1024, stdout);
             let mut pre_path = String::new(); // 前一个文件路径
             let mut pre_content = String::new(); // 前一个文件内容
             let mut pip_content_count = 0; //pip_search时，前一文件累计content追加预览数
                                            //初始化pip_keyword_records
-            if keywords.len() > 1 && !regexMode {
+
+            if is_pip_search {
                 for keyword in keywords.clone() {
                     pip_keyword_records.push(PipKeywordRecord {
                         keyword: keyword,
@@ -300,11 +315,12 @@ async fn run_rg_command(
             }
             let mut record = Record {
                 hit_count: 0,
-                path: String::new(),
+                file: String::new(),
                 content: String::new(),
                 created_at: String::new(),
                 modified_at: String::new(),
             };
+            let mut result_records: Vec<Record> = Vec::new();
             let mut first_line = true;
             for line in reader.lines() {
                 match line {
@@ -312,36 +328,41 @@ async fn run_rg_command(
                         //println!("Line: {}", line);
                         if searchFilename {
                             //println!("Filename :{}", line);
-                            if let Some(filename) = Path::new(&line)
-                                .file_name()
-                                .and_then(|os_str| os_str.to_str())
+
+                            // if let Some(filename) = Path::new(&line)
+                            //     .file_name()
+                            //     .and_then(|os_str| os_str.to_str())
+                            let path = Path::new(&line);
+                            if let Some(filename) =
+                                path.file_name().and_then(|os_str| os_str.to_str())
                             {
                                 if re.is_match(filename) {
-                                    let (created_at, modified_at) = get_filetime(line.as_str());
-                                    window
-                                        .emit(
-                                            "rg-output",
-                                            "1".to_string()
-                                                + "~"
-                                                + line.as_str()
-                                                + "~"
-                                                + created_at.as_str()
-                                                + "~"
-                                                + modified_at.as_str()
-                                                + "~"
-                                                + "-",
-                                        )
-                                        .unwrap();
+                                    let (created_at, modified_at) = get_filetime(&line);
+
+                                    record.hit_count = 1;
+                                    record.file = line.clone();
+                                    record.content = "文件名匹配".to_string();
+                                    record.created_at = created_at;
+                                    record.modified_at = modified_at;
+
+                                    // 如果命中结果缓存满了就发送
+                                    if result_records.len() < MAX_RESULT_CACHE {
+                                        result_records.push(record.clone());
+                                    } else {
+                                        window.emit("rg-output", &result_records).unwrap();
+                                        result_records.clear();
+                                    }
+                                    record.clear();
                                 }
                                 continue;
                             }
                         }
                         // 如果是空格分隔的多关键字，则启用pip_search
-                        if keywords.len() > 1 && !regexMode {
-                            let (path, content) = split_path_content(line.as_str());
+                        if is_pip_search {
+                            let (path, content) = split_path_content(&line);
                             if first_line {
                                 pre_path = path.clone();
-                                pre_content = content.clone() + "\n";
+                                pre_content = "[1] ".to_string() + &content.clone() + "\n";
                                 pip_content_count = 1;
                                 //first_line = false;
                             }
@@ -352,9 +373,14 @@ async fn run_rg_command(
                                     content: "————————————————".to_string()
                                         + keywords[0].as_str()
                                         + "["
-                                        + pip_content_count.to_string().as_str()
+                                        + &pip_content_count.to_string()
                                         + "]————————————————\n"
-                                        + pre_content.as_str()
+                                        + &pre_content
+                                            .replace("omitted end of long line", "行尾过长略...")
+                                            .replace(
+                                                "Omitted long matching line",
+                                                "...省略过长匹配行...",
+                                            )
                                         + "\n",
                                 });
                                 // 第一关键字记录数更新
@@ -364,69 +390,56 @@ async fn run_rg_command(
                                 // 追加了一次命中，重置变量
                                 pip_content_count = 1;
                                 pre_path = path;
-                                pre_content = content.clone() + "\n";
+                                pre_content ="[1] ".to_string() + &content.clone() + "\n";
                             } else {
                                 // 避免第一个文件内容重复
                                 if first_line {
                                     first_line = false;
                                     continue;
                                 }
-                                // 同一文件，最多追加3个命中内容
-                                if pip_content_count < PIP_SEARCH_MAX_HITS {
-                                    pre_content =
-                                        pre_content.clone() + content.clone().as_str() + "\n";
-                                }
                                 pip_content_count = pip_content_count + 1;
+                                // 同一文件，最多追加3个命中内容
+                                if pip_content_count <= PIP_SEARCH_MAX_HITS {
+                                    pre_content =
+                                        //pre_content.clone() + content.clone().as_str() + "\n";
+                                        pre_content.clone() +"["+&pip_content_count.to_string()+"] "+ &content + "\n";
+                                }
                             }
                         } else {
                             //正常全文搜索
 
                             //println!("Line: {}", line.as_str());
-                            let (path, content) = split_path_content(line.as_str());
+                            let (path, content) = split_path_content(&line);
                             if path.len() == 0 {
                                 continue;
                             }
                             if path != pre_path {
-                                // 向前端发送搜索结果,以'~'分割
+                                // 向前端发送搜索结果
                                 if record.hit_count > 0 {
-                                    window
-                                        .emit(
-                                            "rg-output",
-                                            record.hit_count.to_string()
-                                                + "~"
-                                                + record.path.as_str()
-                                                + "~"
-                                                + record.created_at.as_str()
-                                                + "~"
-                                                + record.modified_at.as_str()
-                                                + "~"
-                                                + record
-                                                    .content
-                                                    .replace(
-                                                        "omitted end of long line",
-                                                        "行尾过长略...",
-                                                    )
-                                                    .replace(
-                                                        "Omitted long matching line",
-                                                        "...省略过长匹配行...",
-                                                    )
-                                                    .as_str(),
-                                        )
-                                        .unwrap();
+                                    // 如果命中结果缓存满了就发送，否则继续缓存
+                                    if record.content.len() < MAX_CONTENT_SIZE {
+                                        //先替换英文提示字符
+                                        record.content = record
+                                            .content
+                                            .replace("omitted end of long line", "行尾过长略...")
+                                            .replace(
+                                                "Omitted long matching line",
+                                                "...省略过长匹配行...",
+                                            );
+                                        result_records.push(record.clone());
+                                    } else {
+                                        window.emit("rg-output", &result_records).unwrap();
+                                        result_records.clear();
+                                    }
                                 }
                                 // 重置记录
-                                record = Record {
-                                    hit_count: 0,
-                                    path: String::new(),
-                                    content: String::new(),
-                                    created_at: String::new(),
-                                    modified_at: String::new(),
-                                };
+                                record.clear();
+                                // 记录命中
                                 record.hit_count = record.hit_count + 1;
-                                record.path = path.clone();
-                                record.content = content + "\n";
+                                record.file = path.clone();
+                                record.content = "[1] ".to_string() +&content + "\n";
 
-                                let (created_at, modified_at) = get_filetime(path.as_str());
+                                let (created_at, modified_at) = get_filetime(&path);
 
                                 record.created_at = created_at;
                                 record.modified_at = modified_at;
@@ -437,7 +450,7 @@ async fn run_rg_command(
                                 record.hit_count = record.hit_count + 1;
                                 // 限制content长度，防止前端卡死
                                 if record.content.len() < MAX_CONTENT_SIZE {
-                                    record.content = record.content + content.as_str() + "\n";
+                                    record.content = record.content +"["+&record.hit_count.to_string()+"] "+ &content + "\n";
                                 }
                             }
                         }
@@ -447,7 +460,7 @@ async fn run_rg_command(
             }
             //循环结束，处理最后一个文件
             // 如果是pip_search
-            if keywords.len() > 1 && !regexMode && pre_path.trim().len() > 0 {
+            if is_pip_search && pre_path.trim().len() > 0 {
                 //把最后一个文件加入file_list
                 file_list.push(FileRecord {
                     file_path: pre_path,
@@ -456,35 +469,44 @@ async fn run_rg_command(
                         + "["
                         + pip_content_count.to_string().as_str()
                         + "]————————————————\n"
-                        + pre_content.as_str()
+                        + &pre_content
+                            .replace("omitted end of long line", "行尾过长略...")
+                            .replace("Omitted long matching line", "...省略过长匹配行...")
                         + "\n",
                 });
                 pip_keyword_records[0].hits = pip_keyword_records[0].hits + 1;
             }
             if record.hit_count > 0 {
-                window
-                    .emit(
-                        "rg-output",
-                        record.hit_count.to_string()
-                            + "~"
-                            + record.path.as_str()
-                            + "~"
-                            + record.created_at.as_str()
-                            + "~"
-                            + record.modified_at.as_str()
-                            + "~"
-                            + record
-                                .content
-                                .replace("omitted end of long line", "行尾过长略...")
-                                .replace("Omitted long matching line", "...省略过长匹配行...")
-                                .as_str(),
-                    )
-                    .unwrap();
+                record.content = record
+                    .content
+                    .replace("omitted end of long line", "行尾过长略...")
+                    .replace("Omitted long matching line", "...省略过长匹配行...");
+                result_records.push(record.clone());
+                window.emit("rg-output", &result_records).unwrap();
+                result_records.clear();
+                // window
+                //     .emit(
+                //         "rg-output",
+                //         record.hit_count.to_string()
+                //             + "~"
+                //             + &record.file
+                //             + "~"
+                //             + &record.created_at
+                //             + "~"
+                //             + &record.modified_at
+                //             + "~"
+                //             + record
+                //                 .content
+                //                 .replace("omitted end of long line", "行尾过长略...")
+                //                 .replace("Omitted long matching line", "...省略过长匹配行...")
+                //                 .as_str(),
+                //     )
+                //     .unwrap();
             }
         }
 
         // 如果是空格分隔的多关键字，则启用pip_search
-        if keywords.len() > 1 && !regexMode && file_list.len() > 0 {
+        if is_pip_search && file_list.len() > 0 {
             // let s = "[管道搜索]->[".to_string()
             //     + keywords[0].as_str()
             //     + "]->("
@@ -502,7 +524,8 @@ async fn run_rg_command(
                     "-M ".to_string()
                         + maxColumn.to_string().as_str()
                         + " -m "
-                        + maxCount.to_string().as_str(),
+                        + maxCount.to_string().as_str()
+                        + " -i --trim ",
                     pip_keyword_records,
                 );
                 println!("Command finished with status: {}", status.code().unwrap());
@@ -525,7 +548,7 @@ async fn run_rg_command(
                     None => {}
                 }
 
-                if keywords.len() > 1 && !regexMode && file_list.len() == 0 {
+                if is_pip_search && file_list.len() == 0 {
                     pip_progress_update(window.clone(), &pip_keyword_records, 0);
                 }
                 emit_completed_signal(window, status);
@@ -538,6 +561,8 @@ async fn run_rg_command(
     })
     .await
     .map_err(|e| e.to_string())?;
+    let duration = start.elapsed();
+    println!("Time taken: {:?}", duration);
     Ok(())
 }
 fn pip_progress_update(
@@ -583,11 +608,18 @@ fn pip_search(
     //     + "]->("
     //     + file_list.len().to_string().as_str()
     //     + ")";
-    println!("Addtional args: {}", addtional_args);
+    //println!("Addtional args: {}", addtional_args);
     for i in 1..keywords.len() {
         let mut next_file_list: Vec<FileRecord> = Vec::new();
         let keyword = keywords[i].clone();
-
+        let mut result_records: Vec<Record> = Vec::new();
+        // let mut record: Record = Record {
+        //     hit_count: 0,
+        //     file: String::new(),
+        //     content: String::new(),
+        //     created_at: String::new(),
+        //     modified_at: String::new(),
+        // };
         // key = key.clone() + "->[" + keywords[i].as_str() + "]";
         // 输出当前关键字的进度信息
         //window
@@ -622,8 +654,8 @@ fn pip_search(
                 .spawn()
                 .expect("Failed to execute rga process");
             if let Some(stdout) = rg_process.stdout.take() {
-                let reader = BufReader::new(stdout);
-                //总命中行数
+                let reader = BufReader::with_capacity(1024 * 64, stdout); // new(stdout);
+                                                                          //总命中行数
                 let mut total_lines = 0;
                 //前3行内容
                 let mut top3_lines: Vec<String> = Vec::new();
@@ -633,7 +665,9 @@ fn pip_search(
                         Ok(line) => {
                             total_lines += 1;
                             if total_lines <= PIP_SEARCH_MAX_HITS {
-                                top3_lines.push(line);
+                                top3_lines.push(
+                                    "[".to_string() + &total_lines.to_string() + "] " + &line,
+                                );
                             }
                         }
                         Err(err) => eprintln!("Error reading line: {}", err),
@@ -648,31 +682,26 @@ fn pip_search(
                     //Ok(line) => {
                     //搜索完毕，输出结果
                     if i == keywords_len - 1 {
-                        let (created_at, modified_at) = get_filetime(file2.file_path.as_str());
+                        let (created_at, modified_at) = get_filetime(&file2.file_path);
 
-                        window
-                            .emit(
-                                "rg-output",
-                                (total_lines.to_string()
-                                    + "~"
-                                    + file2.file_path.as_str()
-                                    + "~"
-                                    + created_at.as_str()
-                                    + "~"
-                                    + modified_at.as_str()
-                                    + "~"
-                                    + file2.content.as_str()
-                                    + "————————————————"
-                                    + keywords[i].as_str()
-                                    + "["
-                                    + total_lines.to_string().as_str()
-                                    + "]———————————————\n"
-                                    + lines_str.as_str())
-                                .replace("omitted end of long line", "行尾过长略...")
-                                .replace("Omitted long matching line", "...省略过长匹配行..."),
-                                //+ line.as_str(),
-                            )
-                            .unwrap();
+                        result_records.push(Record {
+                            hit_count: total_lines as u32,
+                            file: file2.file_path.clone(),
+                            created_at: created_at,
+                            modified_at: modified_at,
+                            content: file2.content.clone()
+                                + "————————————————"
+                                + &keywords[i]
+                                + "["
+                                + &total_lines.to_string()
+                                + "]———————————————\n"
+                                + &lines_str
+                                    .replace("omitted end of long line", "行尾过长略...")
+                                    .replace("Omitted long matching line", "...省略过长匹配行..."),
+                        });
+                        window.emit("rg-output", &result_records).unwrap();
+                        result_records.clear();
+
                         pip_keyword_records[i].hits = pip_keyword_records[i].hits + 1;
                         pip_progress_update(window.clone(), &pip_keyword_records, i);
                     } else {
@@ -682,11 +711,13 @@ fn pip_search(
                             file_path: file2.file_path.clone(),
                             content: file2.content.clone()
                                 + "————————————————"
-                                + keywords[i].as_str()
+                                + &keywords[i]
                                 + "["
-                                + total_lines.to_string().as_str()
+                                + &total_lines.to_string()
                                 + "]————————————————\n"
-                                + lines_str.as_str()
+                                + &lines_str
+                                    .replace("omitted end of long line", "行尾过长略...")
+                                    .replace("Omitted long matching line", "...省略过长匹配行...")
                                 + "\n",
                         });
                         // 关键字命中数更新
@@ -708,16 +739,13 @@ fn pip_search(
                         let mut lines = String::new();
                         let _ = reader.read_to_string(&mut lines).unwrap();
                         if lines.trim().len() > 0 {
-                            eprintln!(
-                                "Pip_srearch() running rga process Error : {}",
-                                lines.as_str()
-                            );
+                            eprintln!("Pip_srearch() running rga process Error : {}", &lines);
                         }
                     }
                     None => {}
                 }
 
-                eprintln!("pip_srearch() Error running rga process: {}", status);
+                //eprintln!("pip_srearch() Error running rga process: {}", status);
                 continue;
             }
         }

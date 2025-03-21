@@ -130,7 +130,7 @@
                     <td class="text-end fs-6 " title="转到文件所在目录"><a class="no-underline " href="#"
                             @click.prevent="gotoFolder(line.file)"><img src="/src/assets/folder.svg" class="icon"
                                 alt="Icon"></a></td>
-                    <td class="text-end fs-6 " title="关键字在该文件中的出现次数/命中次数&#10;&#10;受限于【最大匹配次数】设置">{{ line.hitCount }}</td>
+                    <td class="text-end fs-6 " title="关键字在该文件中的出现次数/命中次数&#10;&#10;受限于【最大匹配次数】设置">{{ line.hit_count }}</td>
                     <td class="text-center fs-6 " v-show="displayModifiedAt" style="width: 40px;" title="">{{ line.modified_at}}</td>
                     <td class="text-center fs-6 " v-show="displayCreatedAt" style="width: 40px;" title="">{{ line.created_at}}</td>
                     <td class="text-start fs-6 "><a class="no-underline " href="#" @click.prevent="openFile(line.file)"
@@ -285,7 +285,7 @@ export default {
             { include: true, type: 'dhall', content: '*.dhall' },
             { include: true, type: 'diff', content: '*.diff *.patch' },
             { include: true, type: 'dita', content: '*.dita *.ditamap *.ditaval' },
-            { include: true, type: 'doc', content: '*.docx *.doc *.odt *.ods *.odf *.rtf *.xls *.xlsx *.pdf *.PDF' },
+            { include: true, type: 'doc', content: '*.docx *.doc *.odt *.ods *.odf *.rtf *.xls *.xlsx *.pdf' },
             { include: true, type: 'docker', content: '*Dockerfile*' },
             { include: true, type: 'dockercompose', content: 'docker-compose.*.yml docker-compose.yml' },
             { include: true, type: 'dts', content: '*.dts *.dtsi' },
@@ -364,7 +364,7 @@ export default {
             { include: true, type: 'pants', content: 'BUILD' },
             { include: true, type: 'pascal', content: '*.dpr *.inc *.lpr *.pas *.pp' },
             { include: true, type: 'picture', content: '*.[jJ][pP][gG] *.[jJ][pP][eE][gG] *.[bB][mM][pP] *.[pP][nN][gG] *.[gG][iI][fF] *.jpg *.tiff *.raw *.svg *.psd *.eps' },
-            { include: true, type: 'pdf', content: '*.pdf *.PDF' },
+            { include: true, type: 'pdf', content: '*.pdf' },
             { include: true, type: 'perl', content: '*.PL *.perl *.pl *.plh *.plx *.pm *.t' },
             { include: true, type: 'php', content: '*.php *.php3 *.php4 *.php5 *.php7 *.php8 *.pht *.phtml' },
             { include: true, type: 'po', content: '*.po' },
@@ -537,15 +537,15 @@ export default {
                 //descending
                 resetTableHeader();
                 hc.innerText = "命中↓";
-                output.value.sort((a, b) => b.hitCount - a.hitCount);
+                output.value.sort((a, b) => b.hit_count - a.hit_count);
             } else if (hc.innerText === "命中↓") {
                 //ascending   
                 hc.innerText = "命中↑";
-                output.value.sort((a, b) => a.hitCount - b.hitCount);
+                output.value.sort((a, b) => a.hit_count - b.hit_count);
             } else {
                 //descending
                 hc.innerText = "命中↓";
-                output.value.sort((a, b) => b.hitCount - a.hitCount);
+                output.value.sort((a, b) => b.hit_count - a.hit_count);
             }
             //sf.innerText = "文件-";
             scrollToTop();
@@ -725,18 +725,19 @@ export default {
         onMounted(() => {
             //设置默认搜索目录
             getHomeDir();
-            listen('rg-output', event => {               
-            //  event.payload格式：hit_count~file~created_at~modified_at~content
-                let record=event.payload.split('~');
-                if (searchFilename.value) {
-                    output.value.push({hitCount:0, file: record[1],created_at:record[2], modified_at:record[3], content: '' });
-                    return;
-                }
-                // 如果file字段为空
-                if (record[1] === '') {
-                    return;
-                }
-                output.value.push({ hitCount: record[0], file: record[1],created_at:record[2], modified_at:record[3], content: record[4] });
+            listen('rg-output', event => {    
+                // event.payload格式：是record数组
+                // Record{
+                //   hit_count: number,
+                //   file:string,
+                //   created_at:string,
+                //   modified_at:string,
+                //   content:string
+                // }
+           
+                console.log(event.payload);
+                output.value.push(...event.payload);
+                //output.value.push({ hit_count: record[0], file: record[1],created_at:record[2], modified_at:record[3], content: record[4] });
             });
 
            
