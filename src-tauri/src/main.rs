@@ -8,6 +8,7 @@ use ripgrepa_gui::myutils::*;
 use serde::{Deserialize, Serialize};
 use std::env::consts::OS;
 use std::io::{self, BufRead, BufReader, Read};
+use std::time::Duration;
 //use tauri::window;
 //use tauri::{window, EventLoopMessage};
 //use std::os;
@@ -32,7 +33,8 @@ use std::process::{Command, ExitStatus};
 const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2026, 12, 30);
 const PIP_SEARCH_MAX_HITS: usize = 3; // pip search每个关键字会记录的最大结果数
 const MAX_CONTENT_SIZE: usize = 3000; // 命中记录Content字段最大长度
-const MAX_RESULT_CACHE: usize = 50; // 命中结果缓存最大数量
+const MAX_RESULT_CACHE: usize = 100; // 命中结果缓存最大数量
+const EMIT_INTERVAL: u64 = 2; // 前端消息最大推送间隔
 const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml  *.srt *.eml *.sub  *.tex";
 //const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml *.epub *.srt *.eml *.sub *.sql *.mobi *.azw *.azw3 *.tex *.vtt";
 
@@ -249,6 +251,8 @@ async fn run_rg_command(
     }
     use std::time::Instant;
     let start = Instant::now();
+
+    let mut emit_start=Instant::now();
     //std::thread::spawn(move || {
     tokio::task::spawn_blocking(move || {
         let is_pip_search = keywords.len() > 1 && !regex_mode;
@@ -349,13 +353,15 @@ async fn run_rg_command(
 
                                     result_records.push(record.clone());
                                     // 如果命中结果缓存满了就发送
-                                    if result_records.len() >= MAX_RESULT_CACHE{
+                                    if result_records.len() >= MAX_RESULT_CACHE || emit_start.elapsed() >= Duration::from_secs(EMIT_INTERVAL) {
                                         window.emit("rg-output", &result_records).unwrap();
                                         result_records.clear();
+                                        emit_start=Instant::now();
                                     } 
                                     
                                     record.clear();
                                 }
+                                
                                 continue;
                             }
                         }
@@ -415,9 +421,11 @@ async fn run_rg_command(
                             if path.is_empty() {
                                 continue;
                             }
+                            // 如果是新文件，则记录
                             if path != pre_path {
                                 // 向前端发送搜索结果
                                 if record.hit_count > 0 {
+                                    //先替换英文提示字符
                                     record.content = record
                                             .content
                                             .replace("omitted end of long line", "行尾过长略...")
@@ -428,11 +436,11 @@ async fn run_rg_command(
                                     result_records.push(record.clone());
                                     //if record.content.len() < MAX_CONTENT_SIZE {
                                     // 如果命中结果缓存满了就发送，否则继续缓存
-                                    if result_records.len() >= MAX_RESULT_CACHE{
-                                        //先替换英文提示字符
+                                    if result_records.len() >= MAX_RESULT_CACHE || emit_start.elapsed() >= Duration::from_secs(EMIT_INTERVAL) {
                                        
                                         window.emit("rg-output", &result_records).unwrap();
                                         result_records.clear();
+                                        emit_start=Instant::now();
                                     } 
                                     
                                 }
@@ -457,6 +465,7 @@ async fn run_rg_command(
                                     record.content = record.content +"["+&record.hit_count.to_string()+"] "+ &content + "\n";
                                 }
                             }
+                            
                         }
                     }
                     Err(err) => eprintln!("Error reading line: {}", err),
