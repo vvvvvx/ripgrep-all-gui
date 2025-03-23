@@ -144,7 +144,7 @@
         <div class="row justify-content-end">
             <div class="col-auto">
             <!--<span>Version: {{ curVersion }} &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com&emsp;Download：https://gitee.com/vvvvvx/fast-full-text-search</span> -->
-            <span title="点我访问软件主页，可提Bug或建议。"> <a href="https://gitee.com/vvvvvx/fast-full-text-search" target="_blank">Developed by Viaco.</a>&emsp; Email : viaco.xu@qq.com&emsp;</span><span :class="[(curVersion!==latestVersion && latestVersion!='') ?  'blink':'']" v-html="versionText" :title="versionTitle"></span>
+            <span title="点我访问软件主页，可提Bug或建议。"> <a href="https://gitee.com/vvvvvx/fast-full-text-search" target="_blank">Developed by Viaco.</a>&emsp; Email : 106324221@qq.com&emsp;</span><span :class="[(curVersion < latestVersion && latestVersion!='') ?  'blink':'']" v-html="versionText" :title="versionTitle"></span>
         </div>
         </div>
     </div>
@@ -184,6 +184,7 @@ import { invoke } from '@tauri-apps/api/tauri';
 import { nextTick, onBeforeUnmount, onMounted, ref,computed } from 'vue';
 import { listen } from '@tauri-apps/api/event';
 import { tr } from 'vuetify/locale';
+import { getVersion } from '@tauri-apps/api/app';
 
 
 function getById(id) {
@@ -246,10 +247,11 @@ export default {
         const displayModifiedAt=ref(true); //是否显示修改时间
         const maxColumn=ref(200); //匹配结果行的最大显示长度,过长将被省略显示
         const isPipMode=ref(false); //是否启用了pip模式
-        const curVersion=ref('v1.3.1'); //当前版本号
+        const curVersion=ref(''); //当前版本号
         const latestVersion=ref(''); //最新版本号
-        const versionText=computed(()=>{return ((curVersion.value.toLowerCase()!=latestVersion.value.toLowerCase()) && latestVersion.value!='') ?  `<a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank" style="text-decoration:none;color:green;">有新版本，点我下载！</a>`:`<a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank" style="text-decoration:none;color:white;">Version: ${curVersion.value}</a>` ;}); //版本号显示文本
-        const versionTitle=computed(()=>{return ((curVersion.value.toLowerCase()!=latestVersion.value.toLowerCase()) && latestVersion.value!='') ? `当前版本：${curVersion.value}  最新版本：${latestVersion.value}`:"点击我查看版本更新信息。"})
+        const latestVersionDesc=ref(''); //最新版本描述
+        const versionText=computed(()=>{return ((curVersion.value.toLowerCase() < latestVersion.value.toLowerCase()) && latestVersion.value!='') ?  `<a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank" style="text-decoration:none;color:green;">有新版本，点我下载！</a>`:`<a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank" style="text-decoration:none;color:white;">Version: ${curVersion.value}</a>` ;}); //版本号显示文本
+        const versionTitle=computed(()=>{return ((curVersion.value.toLowerCase() < latestVersion.value.toLowerCase()) && latestVersion.value!='') ? `当前版本：${curVersion.value}  最新版本：${latestVersion.value} \n\n新版本更新：\n${latestVersionDesc.value}`:"点击我查看版本更新信息。"}); //版本号鼠标悬停提示
 
         const items= ref([
             { include: true, type: 'ada', content: '*.adb *.ads' },
@@ -746,7 +748,14 @@ export default {
             getHomeDir();
 
             try {
-                latestVersion.value = await invoke('check_update');
+                curVersion.value = await getVersion();
+                curVersion.value="v"+curVersion.value;
+
+                let latest = await invoke('check_update');
+                latestVersion.value = latest.tag_name;
+                latestVersionDesc.value = latest.body;
+
+                console.log(latest);
                 // if(curVersion.value.toLowerCase()  < latestVersion.value.toLowerCase()){
                 //     //alert("有新版本发布！\n当前版本："+curVersion.value+"，最新版本："+latestVersion.value+"\n请前往 https://gitee.com/vvvvvx/fast-full-text-search/releases 下载最新版本。");
                 //     getById("alertNewVersionBox").style.display="block";
@@ -864,6 +873,7 @@ export default {
             maxColumn,
             searchAll,
             latestVersion,
+            latestVersionDesc,
             curVersion,
             versionText,
             versionTitle,

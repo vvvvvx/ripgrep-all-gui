@@ -52,17 +52,9 @@ pub fn generate_patterns(patterns: &str) -> String {
     let ptrns: Vec<&str> = patterns.split_whitespace().collect();
 
     if ptrns.len() == 1 {
-        return " -F ".to_string() + ptrns[0] + " ";
+        " -F ".to_string() + ptrns[0] + " "
     } else {
-        return " -U -e ".to_string()
-            + ptrns[0]
-            + ".*"
-            + ptrns[1]
-            + "|"
-            + ptrns[1]
-            + ".*"
-            + ptrns[0]
-            + " ";
+        " -U -e ".to_string() + ptrns[0] + ".*" + ptrns[1] + "|" + ptrns[1] + ".*" + ptrns[0] + " "
     }
     // -e '数据治理.*财务|财务.*数据治理'
 }
