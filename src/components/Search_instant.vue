@@ -5,7 +5,7 @@
                 <div class="input-group mb-0 mt-0 ">
                     <span class="input-group-text dark-mode ht-45">搜索位置</span>
                     <input class="form-control dark-mode ht-45" v-model="searchPath" placeholder="Enter search path"
-                        title="搜索根目录&#10;&#10;全盘搜索时间也不会太久，&#10;但缩小搜索范围，会大大缩短搜索时间。" />
+                        title="搜索根目录&#10;&#10;全盘搜索时间也不会太久，&#10;但缩小搜索范围，会大大缩短搜索时间。&#10;&#10;可空格分隔多个目录或盘符，例如：&#10;或 C  D  E &#10;或 C:  D:  E: &#10;或 C:\  D:\  E:\&#10;或 D:\文件  E:\日记"/>
                     <button class="btn btn-secondary pt-1 ht-45" @click="openFolderDialog" title="点击选择搜索根路径">...</button>
                 </div>
                 <div class="input-group mb-1 mt-0 ">
@@ -38,7 +38,7 @@
                         </div>
                     </div>
                     <!--    <span class="input-group-text dark-mode">搜索模式</span> -->
-                    <input class="form-control dark-mode  mt-1 ht-45 search-input" v-model="searchPattern" @keydown="handleSearchKeydown" placeholder="全文搜索关键字  如：市场调研 销售数据 人工智能"
+                    <input class="form-control dark-mode  mt-1 ht-45 search-input" id="searchPatternInput" v-model="searchPattern" @keydown="handleSearchKeydown" placeholder="全文搜索关键字  如：市场调研 销售数据 人工智能"
                         title="全文搜索关键字&#10;&#10;1. 支持正则表达式（需开启Regex模式）。&#10;2. 普通模式：即单关键字搜索，最常用！&#10;3. 管道模式：空格分隔多关键字，将漏斗式逐关键字过滤，较耗时。&#10;&#10;注意：&#10;管道模式下，低频关键字靠前放有利于缩短搜索时间&#10;管道模式下，每关键字最多显示三次命中结果，仅显示最后关键字的命中次数。&#10;&#10;正则说明：&#10;1. 全文搜索时，支持高级正则模式先行和后行断言，如：(?=.*K1)(?=.*K2)(?=.*K3)&emsp; 表示字符串同时含K1、K2、K3&#10;2. 仅搜文件名 时，默认为普通正则模式，不必勾选Regex" />
                     <button class="btn btn-success mt-1 pt-1 ht-45 search-button" @click="runCommand"
                         title="为缩短搜索时间，程序会多线程并发搜索。&#10;因此，CPU占用率很高是正常现象！">搜索</button>
@@ -60,7 +60,7 @@
                 <input type="checkbox" class="form-check-input mt-2" id="search-binary" v-model="searchBinary" />
             </div>
             <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll" title="搜索任何格式的文件，但不包括隐藏文件或二进制文件。&#10;&#10;勾选此项，速度最慢。&#10;&#10;勾选此项，将忽略用户指定的文件类别，执行最全面的搜索。">
-                <label class="form-check-label mt-0 pt-0 ht-45" for="">搜任何文件</label>
+                <label class="form-check-label mt-0 pt-0 ht-45" for="">搜所有类别</label>
                 <input type="checkbox" class="form-check-input mt-2"   v-model="searchAll" />
             </div>
             <div class="input-group mt-0 " style="width: fit-content;display: inline-flex;padding-left:0px;padding-right:0px;"
@@ -150,7 +150,7 @@
     </div>
     <div id="alertBox" class="custom-alert" >
         <span style=" font-weight: bold;" class="fs-5 text-warning ">{{ searchAll ? '全面搜索，极耗时！' :'【文件类别】未指定' }} </span><br><br>
-      {{ searchAll ? '将搜索【所有类别】的文件，速度最慢，请耐心等待...':'将搜索所有【常见类别】的文件，速度较慢！ 请耐心等待...'}}<br>
+      {{ searchAll ? '将搜索【所有类别】的文件，速度最慢，请耐心等待...':'将搜索所有【常见类别】文件，速度可能较慢！ 请耐心等待...'}}<br><br>
       指定文件类别，速度成倍提升！<br><br>
 
       <span class="red-text">如需终止漫长搜索，请关闭本程序后重开。</span>
@@ -162,9 +162,12 @@
     <div id="alertRuningBox" class="custom-alert" >
       <span style="font-weight: bold;" class="fs-5 text-warning ">{{ isDone ? '搜索完成！':'当前搜索未结束！'}}</span><br>
       <span style="font-weight: bold;" class="fs-5 text-warning">{{ isDone ? '':'请耐心等待...'}}</span><br><br>
-      {{ isDone ? '请点击确定':'如欲强行终止，可关闭本程序后重新打开。'}}
+      {{ isDone ? '请点击取消':'是否强行终止？'}}
       <br><br>
-      <button @click="closeRuningAlert" id="closeRuningAlertBtn" class="btn btn-primary">确定</button>
+      <div class="d-flex justify-content-between">
+      <button @click="forceKillSearch" id="forceKillBtn" class="btn btn-primary">终止</button>
+      <button @click="closeRuningAlert" id="closeRuningAlertBtn" class="btn btn-primary">取消</button>
+      </div>
     
     </div>
     <div id="alertNewVersionBox" class="custom-alert" >
@@ -185,6 +188,7 @@ import { nextTick, onBeforeUnmount, onMounted, ref,computed } from 'vue';
 import { listen } from '@tauri-apps/api/event';
 import { tr } from 'vuetify/locale';
 import { getVersion } from '@tauri-apps/api/app';
+import { homeDir } from '@tauri-apps/api/path';
 
 
 function getById(id) {
@@ -462,6 +466,8 @@ export default {
         ]);
         const filteredItems= ref([]);
         const selectedIndex= ref(-1) ;
+        const homeDir=ref('');
+        let timeoutId= null;
 
         const filterItems=()=> {
             filteredItems.value = items.value.filter(item => item.content.toLowerCase().includes(filenamePattern.value.toLowerCase()) ||
@@ -527,6 +533,11 @@ export default {
         const showCustomAlert= ()=> {
           getById("alertBox").style.display="block";
           getById("closeAlertBtn").focus();
+
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            closeCustomAlert();
+          }, 10000);
           console.log(getById("alertBox").style.display);
         };
 
@@ -539,6 +550,11 @@ export default {
         const showRuningAlert=()=>{
           getById("alertRuningBox").style.display="block";
           getById("closeRuningAlertBtn").focus();
+
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            closeRuningAlert();
+          }, 10000);
         };
         const closeRuningAlert=()=>{
           getById("alertRuningBox").style.display="none";
@@ -634,18 +650,27 @@ export default {
             if(!searchAll.value){
                 searchAll.value=true;
                 filenamePattern.value="";
-                getById("inputFilePattern").placeholder="勾选[搜任何文件]，忽略用户输入类别。执行全面搜索，速度最慢！";
+                getById("inputFilePattern").placeholder="勾选[搜所有类别]，忽略用户输入类别。执行全面搜索，速度最慢！";
             }else{
                 searchAll.value=false;
                 getById("inputFilePattern").placeholder="默认空，搜常用类别。例：*.zip  *.pdf 。指定类别，速度倍增。";
             }
         };
+        const forceKillSearch=async ()=>{
+            try {
+                await invoke('kill_rga_process');
+                closeRuningAlert();
+              } catch (e) {
+                console.error(e);
+              }
+        }
         const runCommand =async () => {
 
             if (!isDone.value) {
               //alert("上一搜索未结束...\n请耐心等待。\n\n如欲强制终止，请关闭本程序后重新打开。");
               console.log("runCommand:isDone:",isDone.value);
               showRuningAlert();
+              
 
               return;
             }
@@ -683,7 +708,7 @@ export default {
             }
             
             //if(filenamePattern.value.trim() === '') {
-            if(searchAll.value){
+            if(searchAll.value || (filenamePattern.value.trim() === '' && !searchFilename.value )){
                 //alert('【文件类别】未指定，将搜索所有类别的文件，速度较慢！\n\n如需终止搜索，请关闭本程序。\n\n请耐心等待！');
                 showCustomAlert();
             }
@@ -728,8 +753,14 @@ export default {
             }
         };
         const openFolderDialog = async () => {
+            
             try {
-                searchPath.value = await invoke('open_folder_dialog');
+                let folder = await invoke('open_folder_dialog');
+                if (searchPath.value === homeDir.value) {
+                    searchPath.value = folder;
+                }else{
+                    searchPath.value+='  '+folder;
+                }
                 //searchPath.value = folderPath;
             } catch (e) {
                 console.error(e);
@@ -738,6 +769,7 @@ export default {
         const getHomeDir = async () => {
             try {
                 searchPath.value = await invoke('get_home_dir');
+                homeDir.value = searchPath.value;
             } catch (e) {
                 console.error(e);
             }
@@ -746,6 +778,8 @@ export default {
         onMounted(async () => {
             //设置默认搜索目录
             getHomeDir();
+
+            getById('searchPatternInput').focus();
 
             try {
                 curVersion.value = await getVersion();
@@ -779,7 +813,11 @@ export default {
                 //output.value.push({ hit_count: record[0], file: record[1],created_at:record[2], modified_at:record[3], content: record[4] });
             });
 
-           
+            listen('rg-process-killed', event => {
+                console.log(event.payload);
+                cmdStatus.value = event.payload;
+                isDone.value=true;
+            });
             listen('completed', event => {
                 let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
                 let ptrn = t.filter(item => item.trim() !== '');//remove empty string
@@ -791,6 +829,8 @@ export default {
                     cmdStatus.value = event.payload;
                 }
                 isDone.value=true;
+                closeRuningAlert();
+                closeCustomAlert();
                 console.log(event.payload);
             });
 
@@ -877,7 +917,8 @@ export default {
             curVersion,
             versionText,
             versionTitle,
-
+            forceKillSearch,
+            homeDir,
         };
     }
 
@@ -1150,4 +1191,5 @@ a:hover {
 .search-input:focus {
   animation: input-focus-animation 0.2s ease-in-out;
 }
+
 </style>

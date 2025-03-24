@@ -6,6 +6,7 @@ use open::that;
 use regex::Regex;
 use ripgrepa_gui::myutils::*;
 use serde::{Deserialize, Serialize};
+
 use std::env::consts::OS;
 use std::io::{self, BufRead, BufReader, Read};
 use std::time::Duration;
@@ -17,7 +18,7 @@ use std::time::Duration;
 use chrono::{Local, NaiveDate, TimeZone, Utc};
 use filetime::FileTime;
 use rfd::FileDialog;
-use std::fs ;
+use std::{fs, path} ;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 use std::path::Path;
@@ -34,7 +35,7 @@ const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2026, 12, 30);
 const PIP_SEARCH_MAX_HITS: usize = 3; // pip search每个关键字会记录的最大结果数
 const MAX_CONTENT_SIZE: usize = 3000; // 命中记录Content字段最大长度
 const MAX_RESULT_CACHE: usize = 100; // 命中结果缓存最大数量
-const EMIT_INTERVAL: u64 = 2; // 前端消息最大推送间隔
+const EMIT_INTERVAL: u64 = 2; // 前端消息最大推送间隔,秒
 const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml  *.srt *.eml *.sub  *.tex";
 //const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml *.epub *.srt *.eml *.sub *.sql *.mobi *.azw *.azw3 *.tex *.vtt";
 
@@ -69,6 +70,39 @@ fn open_folder_dialog() -> String {
     }
 }
 
+fn split_path_arg(path_arg: &str) -> Vec<String> {
+
+    let mut path_vec:Vec<String>=path_arg.trim().split_whitespace().map(String::from).collect();//.map(|s| s.to_string()).collect().to_vec();
+
+    //去重
+    path_vec.sort();
+    path_vec.dedup();
+
+    if OS != "windows" {
+        path_vec
+    } else {
+        let mut pathes=Vec::new();
+        
+        let r1 = Regex::new(r"^[A-Za-z]:$").unwrap();
+        let r2 = Regex::new(r"^[A-Za-z]$").unwrap();
+        let r3 = Regex::new(r"^[A-Za-z]:[^\\]").unwrap();
+
+        for mut path in path_vec {
+            if r1.is_match(path.clone().as_str()) {
+                path+="\\"; 
+            }
+            if r2.is_match(path.clone().as_str()) {
+                path+=":\\"; 
+            }
+            if r3.is_match(path.clone().as_str()) {
+                path=path.replace(":", ":\\"); 
+            }
+            pathes.push(path);
+        }
+        pathes
+    }
+
+}
 
 // 搜索命中结果
 #[derive(Clone, Serialize)]
@@ -167,10 +201,11 @@ async fn run_rg_command(
     // }
 
     // 检查路径是否是 C:或D:格式，如果是，则自动添加反斜杠
-    let r = Regex::new(r"^[A-Za-z]:$").unwrap();
-    if r.is_match(search_path.as_str()) {
-        search_path +=  "\\";
-    }
+    // let r = Regex::new(r"^[A-Za-z]:$").unwrap();
+    // if r.is_match(search_path.as_str()) {
+    //     search_path +=  "\\";
+    // }
+    
 
     let rga_str = " ".to_string()
         + common_args
@@ -228,10 +263,14 @@ async fn run_rg_command(
     }
     rga_args.push("--no-messages".to_string());
 
-    // 路径中可能有空格，需要转义
-    rga_args.push(search_path);
+    // 加入搜索路径, 多个路径用空格分隔
+    // let pathes: Vec<String> = search_path
+    //     .split_whitespace()
+    //     .map(|s| s.to_string())
+    //     .collect();
+    rga_args.append(&mut split_path_arg(search_path.as_str()));
 
-    //println!("rga_str:{:?}", rga_args);
+    println!("rga args:{:?}", rga_args);
     // re用于文件名搜索的模式匹配
     if search_filename && !search_pattern.trim().is_empty() {
         re = match Regex::new(search_pattern) {
@@ -809,7 +848,9 @@ fn split_path_content(line: &str) -> (String, String) {
 
 
 fn emit_completed_signal(window: tauri::Window, status: ExitStatus) {
-    match status.code().unwrap() {
+    if let Some(code) = status.code() {
+    //match status.code().unwrap() {
+    match code {
         0 | 1 => {
             emit_signal(window, "completed", "搜索完成!");
         }
@@ -822,6 +863,9 @@ fn emit_completed_signal(window: tauri::Window, status: ExitStatus) {
         _ => {
             emit_signal(window, "completed", "搜索失败!");
         }
+    }
+    } else {
+        emit_signal(window, "completed", "当前搜索已强制终止!");
     }
 }
 fn emit_signal(window: tauri::Window, signal: &str, message: &str) {
@@ -865,10 +909,86 @@ fn open_file(file_path: &str) {
 #[tauri::command]
 fn get_home_dir() -> String {
     let home_dir = dirs::home_dir().unwrap();
-    home_dir.to_str().unwrap().to_string()
+
+    #[cfg(not(windows))]
+    {
+        home_dir.to_str().unwrap().to_string()
+    }
+
+    #[cfg(windows)]
+    {//如果是Windows则获取所有盘符，排除C盘+用户目录
+        use sysinfo::{Disks, System};
+
+        let mut drives = String::new();
+        let disks = Disks::new_with_refreshed_list(); // 获取所有磁盘
+
+        for disk in disks.list() {
+            //排除C盘
+            if !disk.mount_point().to_string_lossy().starts_with(r"C:\") {
+                drives += &disk.mount_point().to_string_lossy().to_string()+" ";
+            }
+        }
+        drives+home_dir.to_str().unwrap()
+    }
+
+
 }
 
+#[tauri::command]
+fn kill_rga_process(window: tauri::Window) {
+    println!("rga process cleanning");
+    #[cfg(windows)]
+    let mut child = Command::new("taskkill")
+        .arg("/IM")
+        .arg("rg*")
+        .arg("/F")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW
+        .spawn()
+        .expect("Failed to execute taskkill process");
+    #[cfg(not(windows))]
+    let mut child = Command::new("pkill")
+        .arg("-9")
+        .arg("-f")
+        .arg("^rg")
+        .spawn()
+        .expect("Failed to execute pkill process");
+
+
+    let status   = child.wait().expect("Failed to execute taskkill process");
+    if !status.success() {
+        if let Some(stderr) = child.stderr.take() {
+                let mut reader = io::BufReader::new(stderr);
+                let mut lines = String::new();
+                let _ = reader.read_to_string(&mut lines).unwrap();
+                if !lines.trim().is_empty() {
+                    eprintln!("Error killing rga process: {}", &lines);
+                }
+        }
+        eprintln!("Error killing rga process: {}", status);
+    }
+    window.emit("rga-process-killed", "当前搜索已终止！").unwrap();
+    println!("rga process cleanned up");
+}
+
+// struct Cleanup;
+// impl Drop for Cleanup {
+//     fn drop(&mut self) {
+//         kill_rga_process();
+//     }
+// }
+
+// use tauri::{Manager,RunEvent,Event};
+
 fn main() {
+    // 程序退出时会销毁_cleanup，所以会调用kill_rga_process()执行清理任务。
+    // let _cleanup = Cleanup;
+
+
+    // use std::panic;
+    // panic::set_hook(Box::new(|_| { 
+    //     kill_rga_process();
+    // }));
+
     // if OS == "windows" {
     //     // 检查并安装 Scoop
     //     if !is_scoop_installed() {
@@ -888,6 +1008,14 @@ fn main() {
     // }
 
     tauri::Builder::default()
+        // .setup(|app| {
+        //     let app_handle = app.handle();
+        //     app.listen_global("tauri://close-requested", move |_| { 
+        //         kill_rga_process();
+        //         //app_handle.exit();
+        //     });
+        //     Ok(())
+        //     })
         .invoke_handler(tauri::generate_handler![
             run_rg_command,
             open_file,
@@ -895,8 +1023,11 @@ fn main() {
             goto_folder,
             get_home_dir,
             check_update,
+            kill_rga_process,
             //stop_rg_command
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+
+
 }
