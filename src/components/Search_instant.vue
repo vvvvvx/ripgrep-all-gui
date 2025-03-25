@@ -1,12 +1,13 @@
 <template>
-    <div class="header " style="z-index: 1000;">
-        <div class="row">
+    <div class="header " style="z-index: 1000;min-width: 1000px;">
+        <div class="row" style="min-width: 1000px;">
             <div class="col-6 ht-45">
                 <div class="input-group mb-0 mt-0 ">
                     <span class="input-group-text dark-mode ht-45">搜索位置</span>
-                    <input class="form-control dark-mode ht-45" v-model="searchPath" placeholder="Enter search path"
-                        title="搜索根目录&#10;&#10;全盘搜索时间也不会太久，&#10;但缩小搜索范围，会大大缩短搜索时间。&#10;&#10;可空格分隔多个目录或盘符，例如：&#10;或 C  D  E &#10;或 C:  D:  E: &#10;或 C:\  D:\  E:\&#10;或 D:\文件  E:\日记"/>
-                    <button class="btn btn-secondary pt-1 ht-45" @click="openFolderDialog" title="点击选择搜索根路径">...</button>
+                    <input class="form-control dark-mode ht-45" v-model="searchPath" id="inputPath" @contextmenu.prevent="clearPath" placeholder="Enter search path"
+                        title="搜索根目录&#10;&#10;全盘搜索时间也不会太久，&#10;但缩小搜索范围，会大大缩短搜索时间。&#10;&#10;可空格分隔多个目录或盘符，例如：&#10;或 C  D  E &#10;或 C:  D:  E: &#10;或 C:\  D:\  E:\&#10;或 D:\文件  E:\日记  F:&#10;&#10;鼠标右击清空，再右击恢复初始，点击“...”选择目录。"/>
+                    <button class="btn btn-secondary pt-1 ht-45" @click="openFolderDialog" style="padding-left: 7px;padding-right: 5px;" title="点击选择搜索根路径"><img src="/src/assets/folder.svg"  width="24" height="24"
+                                alt="Icon"></button>
                 </div>
                 <div class="input-group mb-1 mt-0 ">
                     <span class="input-group-text dark-mode mt-2 ht-45 d-flex">文件类别</span>
@@ -45,44 +46,48 @@
                 </div>
             </div>
         </div>
-        <div class="row" style="margin-left: 0.2rem;margin-top:3px;">
+        <div class="row " style="margin-left: 0.2rem;margin-top:3px;min-width: 960px;">
+            <div class="col-11 " style="display: flex;flex-wrap: wrap;gap:15px;padding-left: 0px;max-width: 91.66%;min-width: 900px;">
+                <div class="form-check mt-0" style="width: fit-content;" title="只搜索文件名，不搜索内容。">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-file-name">只搜文件名</label>
+                    <input type="checkbox" class="form-check-input mt-2" id="search-file-name" v-model="searchFilename" />
+                </div>
+                <div class="form-check mt-0" style="width: fit-content;" title="默认不搜索隐藏文件，勾选此项，将搜索隐藏文件">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-hidden">搜隐藏文件</label>
+                    <input type="checkbox" class="form-check-input mt-2" id="search-hidden" v-model="searchHidden" />
+                </div>
+                <div class="form-check mt-0" style="width: fit-content;" title="把二进制文件作为文本搜索&#10;&#10;速度较慢，输出内容可能包含非法字符。">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">搜二进制文件</label>
+                    <input type="checkbox" class="form-check-input mt-2" id="search-binary" v-model="searchBinary" />
+                </div>
+                <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll" title="搜索任何格式的文件，但不包括隐藏文件或二进制文件。&#10;&#10;勾选此项，速度最慢。&#10;&#10;勾选此项，将忽略用户指定的文件类别，执行最全面的搜索。">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="">搜所有类别</label>
+                    <input type="checkbox" class="form-check-input mt-2"   v-model="searchAll" />
+                </div>
+                <div class="input-group mt-0" style="width: fit-content;"
+                    title="单个文件中出现的关键字次数达到[最大匹配次数]后，程序将不再搜索此文件，以提高效率。&#10;&#10;0 表示无限制。&#10;过大可能会导致搜索时间过长。">
+                <!--    <label class="form-check-label mt-0 pt-0 ht-45" for="max-count" style="width: fit-content;">最大匹配次数：</label>-->
+                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">匹配次数</span>
+                    <input class="form-control dark-mode mt-0 ht-30" id="max-count" v-model="maxCount"
+                        style="width: 50px;" />
+                </div>
 
-            <div class="form-check mt-0" style="width: fit-content;" title="只搜索文件名，不搜索内容。">
-                <label class="form-check-label mt-0 pt-0 ht-45" for="search-file-name">只搜文件名</label>
-                <input type="checkbox" class="form-check-input mt-2" id="search-file-name" v-model="searchFilename" />
-            </div>
-            <div class="form-check mt-0" style="width: fit-content;" title="默认不搜索隐藏文件，勾选此项，将搜索隐藏文件">
-                <label class="form-check-label mt-0 pt-0 ht-45" for="search-hidden">搜隐藏文件</label>
-                <input type="checkbox" class="form-check-input mt-2" id="search-hidden" v-model="searchHidden" />
-            </div>
-            <div class="form-check mt-0" style="width: fit-content;" title="把二进制文件作为文本搜索&#10;&#10;速度较慢，输出内容可能包含非法字符。">
-                <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">搜二进制文件</label>
-                <input type="checkbox" class="form-check-input mt-2" id="search-binary" v-model="searchBinary" />
-            </div>
-            <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll" title="搜索任何格式的文件，但不包括隐藏文件或二进制文件。&#10;&#10;勾选此项，速度最慢。&#10;&#10;勾选此项，将忽略用户指定的文件类别，执行最全面的搜索。">
-                <label class="form-check-label mt-0 pt-0 ht-45" for="">搜所有类别</label>
-                <input type="checkbox" class="form-check-input mt-2"   v-model="searchAll" />
-            </div>
-            <div class="input-group mt-0 " style="width: fit-content;display: inline-flex;padding-left:0px;padding-right:0px;"
-                title="单个文件中出现的关键字次数达到[最大匹配次数]后，程序将不再搜索此文件，以提高效率。&#10;&#10;0 表示无限制。&#10;过大可能会导致搜索时间过长。">
-            <!--    <label class="form-check-label mt-0 pt-0 ht-45" for="max-count" style="width: fit-content;">最大匹配次数：</label>-->
-                <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 " style="background:#333;padding-right:6px;padding-top:4px;">最大匹配次数</span>
-                <input class="form-control dark-mode mt-0 ht-30" id="max-count" v-model="maxCount"
-                    style="width: 80px;" />
-            </div>
+                <div class=" input-group mt-0" style="width: fit-content;" 
+                    title="目录遍历深度&#10;&#10;1-表示当前文件夹&#10;2-表示当前文件夹及子文件夹&#10;3-表示当前文件夹及子文件夹及子文件夹...&#10;&#10;深度越大，耗时越长">
+                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">遍历深度</span>
+                    <input class="form-control dark-mode mt-0 ht-30" id="max-depth" v-model="maxDepth"
+                        style="width: 50px;" />
+                </div>
+                
+                <div class=" input-group mt-0" style="width: fit-content;" title="匹配结果行预览最大字符数，超过此长度将被截断，并省略显示。">
+                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">预览长度</span>
+                    <input class="form-control dark-mode mt-0 ht-30" id="max-column" v-model="maxColumn"
+                        style="width: 50px;" />
+                </div>
 
-            <div class=" input-group mt-0  " style="width: fit-content;display: inline-flex;padding-left:0px;padding-right: 0px;"
-                title="目录遍历深度&#10;&#10;1-表示当前文件夹&#10;2-表示当前文件夹及子文件夹&#10;3-表示当前文件夹及子文件夹及子文件夹...&#10;&#10;深度越大，耗时越长">
-                <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 " style="background:#333;padding-right:6px;padding-top:4px;">目录遍历深度</span>
-                <input class="form-control dark-mode mt-0 ht-30" id="max-depth" v-model="maxDepth"
-                    style="width: 80px;" />
             </div>
-            
-            <div class=" input-group mt-0  " style="width: fit-content;display: inline-flex;padding-left:0px;padding-right: 0px;"
-                title="匹配结果行预览最大字符数，超过此长度将被截断，并省略显示。">
-                <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 " style="background:#333;padding-right:6px;padding-top:4px;">最大预览长度</span>
-                <input class="form-control dark-mode mt-0 ht-30" id="max-column" v-model="maxColumn"
-                    style="width: 80px;" />
+            <div class="col-1 justify-content-end" style="display: flex;gap:2px;padding-left: 0px;">
+                <button class="btn  mt-0 pt-1 ht-30 btn-warning" @click="forceStop" style="width: 65px;" title="强制终止当前搜索">终止</button>
             </div>
 
             <div style="display: inline-flex;position: absolute;bottom: 0;gap: 0.5rem;padding-left:0px;padding-right: 0px; width:calc(100% - 280px);">
@@ -184,9 +189,9 @@
 
 <script>
 import { invoke } from '@tauri-apps/api/tauri';
-import { nextTick, onBeforeUnmount, onMounted, ref,computed } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted,onUnmounted, ref,computed } from 'vue';
 import { listen } from '@tauri-apps/api/event';
-import { tr } from 'vuetify/locale';
+import { el, tr } from 'vuetify/locale';
 import { getVersion } from '@tauri-apps/api/app';
 import { homeDir } from '@tauri-apps/api/path';
 
@@ -509,6 +514,15 @@ export default {
             filteredItems.value = [];
             getById('inputFilePattern').focus();
         };
+        const clearPath=()=> {
+            if(searchPath.value.trim().length >0){
+                searchPath.value = '';
+            }else{
+                searchPath.value = homeDir.value;
+            }
+            
+            getById('inputPath').focus();
+        };
         const processExclude=(input)=>{
             return input.replace(/\S+/g,'!$&');
         };
@@ -664,6 +678,15 @@ export default {
                 console.error(e);
               }
         }
+        const forceStop= ()=>{
+            if(!isDone.value){
+                if( confirm("确定要终止当前搜索？")){
+                    forceKillSearch();
+                }
+            }else{
+                alert("当前无搜索任务进行。");
+            }
+        }
         const runCommand =async () => {
 
             if (!isDone.value) {
@@ -757,9 +780,12 @@ export default {
             try {
                 let folder = await invoke('open_folder_dialog');
                 if (searchPath.value === homeDir.value) {
-                    searchPath.value = folder;
+                    searchPath.value = folder+" ";
                 }else{
-                    searchPath.value+='  '+folder;
+                    // 已有不加
+                    if(searchPath.value.search(folder+" ")===-1){
+                        searchPath.value+="  "+folder;
+                    }
                 }
                 //searchPath.value = folderPath;
             } catch (e) {
@@ -813,6 +839,7 @@ export default {
                 //output.value.push({ hit_count: record[0], file: record[1],created_at:record[2], modified_at:record[3], content: record[4] });
             });
 
+
             listen('rg-process-killed', event => {
                 console.log(event.payload);
                 cmdStatus.value = event.payload;
@@ -861,6 +888,12 @@ export default {
             document.addEventListener('click', handleDropdownClick);
             //end 新加
         });
+        onUnmounted(() => {
+                console.log("onUnmounted");
+                //清理监听\
+                invoke('kill_rga_process');
+
+            });
         //begin 新加
         onBeforeUnmount(() => {
             document.removeEventListener('click', handleDropdownClick);
@@ -918,7 +951,9 @@ export default {
             versionText,
             versionTitle,
             forceKillSearch,
+            forceStop,
             homeDir,
+            clearPath,
         };
     }
 
@@ -1192,4 +1227,9 @@ a:hover {
   animation: input-focus-animation 0.2s ease-in-out;
 }
 
+.toolbar-span {
+    padding-right:6px;
+    padding-top:6px;
+    padding-left: 0px;
+}
 </style>

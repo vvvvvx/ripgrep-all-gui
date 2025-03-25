@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "极速全文搜索",
-    "version": "1.3.2"
+    "version": "1.4.0"
   },
   "tauri": {
     "allowlist": {
@@ -26,10 +26,10 @@
     "windows": [
       {
         "title": "极速全文搜索",
-        "width": 1920,
-        "height": 1060,
+        "width": 1600,
+        "height": 900,
         "minWidth": 1200,
-        "minHeight": 900,
+        "minHeight": 800,
         "theme": "Dark",
         "resizable": true
       }

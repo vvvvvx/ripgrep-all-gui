@@ -3,8 +3,8 @@
 use std::os::windows::ffi::OsStrExt;
 use std::process::Command;
 
-#[cfg(windows)]
-use winapi::shared::minwindef::{DWORD, UINT};
+// #[cfg(windows)]
+// use winapi::shared::minwindef::{DWORD, UINT};
 
 #[cfg(windows)]
 use winapi::um::fileapi::{GetDriveTypeW, GetFileAttributesW};

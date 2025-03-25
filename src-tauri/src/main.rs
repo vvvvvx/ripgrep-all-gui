@@ -6,6 +6,7 @@ use open::that;
 use regex::Regex;
 use ripgrepa_gui::myutils::*;
 use serde::{Deserialize, Serialize};
+use tauri::window;
 
 use std::env::consts::OS;
 use std::io::{self, BufRead, BufReader, Read};
@@ -925,13 +926,11 @@ fn get_home_dir() -> String {
         for disk in disks.list() {
             //排除C盘
             if !disk.mount_point().to_string_lossy().starts_with(r"C:\") {
-                drives += &disk.mount_point().to_string_lossy().to_string()+" ";
+                drives += &(disk.mount_point().to_string_lossy().to_string()+"  ");
             }
         }
-        drives+home_dir.to_str().unwrap()
+        home_dir.to_str().unwrap().to_string()+"   "+&drives
     }
-
-
 }
 
 #[tauri::command]
@@ -970,18 +969,52 @@ fn kill_rga_process(window: tauri::Window) {
     println!("rga process cleanned up");
 }
 
-// struct Cleanup;
-// impl Drop for Cleanup {
-//     fn drop(&mut self) {
-//         kill_rga_process();
-//     }
-// }
+fn kill_rga_process_fn() {
+    println!("rga process cleanning");
+    #[cfg(windows)]
+    let mut child = Command::new("taskkill")
+        .arg("/IM")
+        .arg("rg*")
+        .arg("/F")
+        .creation_flags(0x08000000) // CREATE_NO_WINDOW
+        .spawn()
+        .expect("Failed to execute taskkill process");
+    #[cfg(not(windows))]
+    let mut child = Command::new("pkill")
+        .arg("-9")
+        .arg("-f")
+        .arg("^rg")
+        .spawn()
+        .expect("Failed to execute pkill process");
 
-// use tauri::{Manager,RunEvent,Event};
+
+    let status   = child.wait().expect("Failed to execute taskkill process");
+    if !status.success() {
+        if let Some(stderr) = child.stderr.take() {
+                let mut reader = io::BufReader::new(stderr);
+                let mut lines = String::new();
+                let _ = reader.read_to_string(&mut lines).unwrap();
+                if !lines.trim().is_empty() {
+                    eprintln!("Error killing rga process: {}", &lines);
+                }
+        }
+        eprintln!("Error killing rga process: {}", status);
+    }
+    
+    println!("rga process cleanned up");
+}
+struct Cleanup;
+impl Drop for Cleanup {
+    fn drop(&mut self) {
+        kill_rga_process_fn();
+    }
+}
+
+ use tauri::Manager ;
 
 fn main() {
     // 程序退出时会销毁_cleanup，所以会调用kill_rga_process()执行清理任务。
-    // let _cleanup = Cleanup;
+     let _cleanup = Cleanup;
 
 
     // use std::panic;
@@ -1008,14 +1041,12 @@ fn main() {
     // }
 
     tauri::Builder::default()
-        // .setup(|app| {
-        //     let app_handle = app.handle();
-        //     app.listen_global("tauri://close-requested", move |_| { 
-        //         kill_rga_process();
-        //         //app_handle.exit();
-        //     });
-        //     Ok(())
-        //     })
+        //窗口居中显示
+        .setup(|app| {
+            let window= app.get_window("main").unwrap();
+            window.center().unwrap();
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             run_rg_command,
             open_file,
