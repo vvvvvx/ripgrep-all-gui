@@ -11,14 +11,18 @@
   <title>Tauri + Vue + Typescript App</title>
   <style>
     body {
-      transition: background-color 0.5s, color 0.5s;
-      /* 平滑过渡 */
+      /*transition: background-color 0.5s, color 0.5s;
+       平滑过渡 */
+      background-color: #333;
       margin: 0;
       display: flex;
       height: 100vh;
       overflow: hidden;
     }
 
+    html {
+      background-color: #333;
+    }
 
     .light-mode {
       background-color: white;
@@ -34,7 +38,7 @@
   </style>
 </head>
 
-<body class="dark-mode">
+<body class="dark-mode" style="background-color: #333;">
   <div class="container-fluid" id="app"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>
@@ -52,7 +56,7 @@
   }
 
   // 初始应用主题
-  applyTheme();
+  //applyTheme();
 
   // 监听主题变化
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);

@@ -13,8 +13,8 @@
                     <span class="input-group-text dark-mode mt-2 ht-45 d-flex">文件类别</span>
                     <!--新加Begin-->
                     <div class="form-control dropdown mt-2 ht-45  flex-column" style="padding: 0%;" @click="handleDropdownClick"> 
-                        <input  class=" dark-mode mt-0  w-100 ht-43" ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="默认空，搜常用类别。例：*.zip  *.pdf 。指定类别，速度倍增。" 
-                        title="【文件类别】，即在哪些类别的文件中搜索内容，通常由扩展名决定。&#10;&#10;默认空，即搜常用类别：Office PDF Markdown Txt 网页 eml LaTeX等。&#10;&#10;不建议留空，明确文件类别，可成倍提高搜索速度。&#10;&#10;可空格分隔多个类别。&#10;通配符*表任意字符。例：&#10;*.docx *.pdf  表示只搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*  表示只搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示只搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示搜索会排除扩展名为 txt 的文件。&#10;!*研究报告* 表示搜索会排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示搜索会排除文件名包含“研究报告”的 pdf 文件。">
+                        <input  class=" dark-mode mt-0  w-100 ht-43" ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="默认空，搜常用类别。例：*.docx  *.pdf 。指定类别，速度倍增。" 
+                        title="【文件类别】，即在哪些类别的文件中搜索内容，通常由扩展名决定。&#10;&#10;1. 输入指定类别时，则只搜该类别的文件，速度最快；&#10;2. 留空时，搜常用类别：Office、PDF、Markdown、Txt、网页、eml、LaTeX等，速度较慢；&#10;3. 勾选【全面搜索】时，搜所有类别文件(不含二进制和隐藏文件)，速度最慢。 &#10;&#10;不建议留空，明确文件类别，可成倍提高搜索速度。&#10;&#10;可空格分隔多个类别。&#10;通配符*表任意字符。例：&#10;*.docx *.pdf  表示只搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*  表示只搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示只搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示搜索会排除扩展名为 txt 的文件。&#10;!*研究报告* 表示搜索会排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示搜索会排除文件名包含“研究报告”的 pdf 文件。">
                         <div v-if="filteredItems.length" class="dropdown-list"  title="✔ Include 包含 此特征&#9;✘ Exclude 排除 此特征&#10;&#10;点击复选框/Ctrl+Space切换&#10;&#10;上下方向键选中，鼠标点击/Enter确认">
 
                     <!---<button class="btn btn-primary  pt-2 ht-30" @click="openFolderDialog" title="点击选择搜索根路径">添加</button> -->
@@ -60,8 +60,8 @@
                     <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">搜二进制文件</label>
                     <input type="checkbox" class="form-check-input mt-2" id="search-binary" v-model="searchBinary" />
                 </div>
-                <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll" title="搜索任何格式的文件，但不包括隐藏文件或二进制文件。&#10;&#10;勾选此项，速度最慢。&#10;&#10;勾选此项，将忽略用户指定的文件类别，执行最全面的搜索。">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="">搜所有类别</label>
+                <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll" title="搜索任何格式的文件，包括zip等压缩文件，但不包括隐藏文件或二进制文件。&#10;&#10;不勾选此项，只搜索常用文件类型。&#10;&#10;勾选此项，速度最慢。&#10;&#10;勾选此项，将忽略用户指定的文件类别，执行最全面的搜索。">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="">全面搜索</label>
                     <input type="checkbox" class="form-check-input mt-2"   v-model="searchAll" />
                 </div>
                 <div class="input-group mt-0" style="width: fit-content;"
@@ -664,7 +664,7 @@ export default {
             if(!searchAll.value){
                 searchAll.value=true;
                 filenamePattern.value="";
-                getById("inputFilePattern").placeholder="勾选[搜所有类别]，忽略用户输入类别。执行全面搜索，速度最慢！";
+                getById("inputFilePattern").placeholder="执行[全面搜索]，忽略指定类别。最全面也最慢！";
             }else{
                 searchAll.value=false;
                 getById("inputFilePattern").placeholder="默认空，搜常用类别。例：*.zip  *.pdf 。指定类别，速度倍增。";
@@ -678,9 +678,10 @@ export default {
                 console.error(e);
               }
         }
-        const forceStop= ()=>{
+        const forceStop=async ()=>{
             if(!isDone.value){
-                if( confirm("确定要终止当前搜索？")){
+                let confirmResult =await confirm("确定要终止当前搜索？");
+                if( confirmResult){
                     forceKillSearch();
                 }
             }else{
@@ -825,18 +826,10 @@ export default {
             }
 
             listen('rg-output', event => {    
-                // event.payload格式：是record数组
-                // Record{
-                //   hit_count: number,
-                //   file:string,
-                //   created_at:string,
-                //   modified_at:string,
-                //   content:string
-                // }
-           
+                       
                 console.log(event.payload);
                 output.value.push(...event.payload);
-                //output.value.push({ hit_count: record[0], file: record[1],created_at:record[2], modified_at:record[3], content: record[4] });
+               
             });
 
 
@@ -844,7 +837,9 @@ export default {
                 console.log(event.payload);
                 cmdStatus.value = event.payload;
                 isDone.value=true;
+                alert(event.payload);
             });
+
             listen('completed', event => {
                 let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
                 let ptrn = t.filter(item => item.trim() !== '');//remove empty string
@@ -888,12 +883,12 @@ export default {
             document.addEventListener('click', handleDropdownClick);
             //end 新加
         });
-        onUnmounted(() => {
-                console.log("onUnmounted");
+        //onUnmounted(() => {
+        //        console.log("onUnmounted");
                 //清理监听\
-                invoke('kill_rga_process');
-
-            });
+        //        invoke('kill_rga_process');
+        //    });
+        
         //begin 新加
         onBeforeUnmount(() => {
             document.removeEventListener('click', handleDropdownClick);

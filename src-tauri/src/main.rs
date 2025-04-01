@@ -6,10 +6,10 @@ use open::that;
 use regex::Regex;
 use ripgrepa_gui::myutils::*;
 use serde::{Deserialize, Serialize};
-use tauri::window;
 
 use std::env::consts::OS;
 use std::io::{self, BufRead, BufReader, Read};
+use std::thread::sleep;
 use std::time::Duration;
 //use tauri::window;
 //use tauri::{window, EventLoopMessage};
@@ -19,7 +19,7 @@ use std::time::Duration;
 use chrono::{Local, NaiveDate, TimeZone, Utc};
 use filetime::FileTime;
 use rfd::FileDialog;
-use std::{fs, path} ;
+use std::fs  ;
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
 use std::path::Path;
@@ -137,7 +137,7 @@ struct PipKeywordRecord {
 async fn run_rg_command(
     window: tauri::Window,
     search_pattern: &str,    // 全文搜索模式
-    mut search_path: String, // 搜索路径
+    search_path: String, // 搜索路径
     filename_pattern: &str,  // 文件名模式特征
     regex_mode: bool,        // 是否使用正则模式
     disp_hit_count: bool,     // 是否显示匹配行数
@@ -154,7 +154,7 @@ async fn run_rg_command(
     let current_date = Local::now().naive_local().date();
     if current_date > OVER_DATE.unwrap() && OS != "linux" {
         window
-            .emit("overdate", Some("软件已过期！\n请根据窗口右下方联系方式索取最新版，或到下面网址下载最新版：\n\nhttps://sourceforge.net/projects/fast-full-text-search/files/latest/download ".to_string()))
+            .emit("overdate", Some("软件已过期！\n请根据窗口右下方联系方式获取最新版".to_string()))
             .unwrap();
         return Ok(());
     }
@@ -935,7 +935,7 @@ fn get_home_dir() -> String {
 
 #[tauri::command]
 fn kill_rga_process(window: tauri::Window) {
-    println!("rga process cleanning");
+    //println!("rga process cleanning");
     #[cfg(windows)]
     let mut child = Command::new("taskkill")
         .arg("/IM")
@@ -965,12 +965,12 @@ fn kill_rga_process(window: tauri::Window) {
         }
         eprintln!("Error killing rga process: {}", status);
     }
-    window.emit("rga-process-killed", "当前搜索已终止！").unwrap();
-    println!("rga process cleanned up");
+    window.emit("rg-process-killed", "当前搜索已终止！").unwrap();
+    println!("Searching process cleanned up");
 }
 
 fn kill_rga_process_fn() {
-    println!("rga process cleanning");
+    println!("Searching process cleanning up");
     #[cfg(windows)]
     let mut child = Command::new("taskkill")
         .arg("/IM")
@@ -999,29 +999,15 @@ fn kill_rga_process_fn() {
                 }
         }
         eprintln!("Error killing rga process: {}", status);
-    }
-    
-    println!("rga process cleanned up");
-}
-struct Cleanup;
-impl Drop for Cleanup {
-    fn drop(&mut self) {
-        kill_rga_process_fn();
+    }else{
+        println!("Searching process cleanned up");
     }
 }
 
  use tauri::Manager ;
 
 fn main() {
-    // 程序退出时会销毁_cleanup，所以会调用kill_rga_process()执行清理任务。
-     let _cleanup = Cleanup;
-
-
-    // use std::panic;
-    // panic::set_hook(Box::new(|_| { 
-    //     kill_rga_process();
-    // }));
-
+    
     // if OS == "windows" {
     //     // 检查并安装 Scoop
     //     if !is_scoop_installed() {
@@ -1040,11 +1026,20 @@ fn main() {
     //     }
     // }
 
-    tauri::Builder::default()
+    let app=tauri::Builder::default()
         //窗口居中显示
         .setup(|app| {
             let window= app.get_window("main").unwrap();
+            
             window.center().unwrap();
+            #[cfg(windows)]
+            sleep(Duration::from_millis(300));
+            window.show().unwrap();
+            //注册应用退出事件
+            //let app_handle = app.handle().clone();
+            app.listen_global("tauri://exit", move |_| {
+                kill_rga_process_fn();
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -1054,11 +1049,20 @@ fn main() {
             goto_folder,
             get_home_dir,
             check_update,
-            kill_rga_process,
+            kill_rga_process, 
             //stop_rg_command
         ])
-        .run(tauri::generate_context!())
+        //.run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running tauri application");
 
+        app.run(|_app_handle, event, | { match event {
+            tauri::RunEvent::ExitRequested { .. }=> {
+                kill_rga_process_fn();
+            }
+            _ => {}
+            
+        }
+});
 
 }
