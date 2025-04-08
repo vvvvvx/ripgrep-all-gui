@@ -155,12 +155,9 @@
     </div>
     <div id="alertBox" class="custom-alert" >
         <span style=" font-weight: bold;" class="fs-5 text-warning ">{{ searchAll ? '全面搜索，极耗时！' :'【文件类别】未指定' }} </span><br><br>
-      {{ searchAll ? '将搜索【所有类别】的文件，速度最慢，请耐心等待...':'将搜索所有【常见类别】文件，速度可能较慢！ 请耐心等待...'}}<br><br>
-      指定文件类别，速度成倍提升！<br><br>
-
-      <span class="red-text">如需终止漫长搜索，请关闭本程序后重开。</span>
+      {{ searchAll ? '搜索【所有类别】的文件，速度最慢，请耐心等待...':'搜索【常用类别】文件，速度可能较慢！ 请耐心等待...'}}<br><br>
+      <span class="red-text">指定文件类别，速度倍增！</span><br><br><br>
       
-      <br><br>
       <button @click="closeCustomAlert" id="closeAlertBtn" class="btn btn-primary">确定</button>
     
     </div>
@@ -699,7 +696,7 @@ export default {
               return;
             }
             if(isPatternNotOK(searchPattern.value) && !regexMode.value){
-              alert("搜索关键字过短！\n英文字符每关键字至少4个字符，或用Regex模式，汉字不限。");
+              alert("搜索关键字过短！\n\n英文字符每关键字至少4个字符，或用Regex模式。汉字长短不限。");
               return;
             } 
             if (searchPattern.value === '' && !searchFilename.value) {    //if search pattern is empty, show error message and return
