@@ -5,7 +5,7 @@
                 <div class="input-group mb-0 mt-0 ">
                     <span class="input-group-text dark-mode ht-45">搜索位置</span>
                     <input class="form-control dark-mode ht-45" v-model="searchPath" id="inputPath" @contextmenu.prevent="clearPath" placeholder="Enter search path"
-                        title="搜索根目录&#10;&#10;全盘搜索时间也不会太久，&#10;但缩小搜索范围，会大大缩短搜索时间。&#10;&#10;可空格分隔多个目录或盘符，例如：&#10;或 C  D  E &#10;或 C:  D:  E: &#10;或 C:\  D:\  E:\&#10;或 D:\文件  E:\日记  F:&#10;&#10;鼠标右击清空，再右击恢复初始，点击“...”选择目录。"/>
+                        title="搜索根目录&#10;&#10;全盘搜索时间也不会太久，&#10;但缩小搜索范围，会大大缩短搜索时间。&#10;&#10;可用'|'分隔多个目录或盘符，例如：&#10;或 C | D | E &#10;或 C: | D: | E: &#10;或 C:\ | D:\ | E:\&#10;或 D:\文件 | E:\日记 | F:&#10;&#10;鼠标右击清空，再右击恢复初始，点击“...”选择目录。"/>
                     <button class="btn btn-secondary pt-1 ht-45" @click="openFolderDialog" style="padding-left: 7px;padding-right: 5px;" title="点击选择搜索根路径"><img src="/src/assets/folder.svg"  width="24" height="24"
                                 alt="Icon"></button>
                 </div>
@@ -59,6 +59,10 @@
                 <div class="form-check mt-0" style="width: fit-content;" title="把二进制文件作为文本搜索&#10;&#10;速度较慢，输出内容可能包含非法字符。">
                     <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">搜二进制文件</label>
                     <input type="checkbox" class="form-check-input mt-2" id="search-binary" v-model="searchBinary" />
+                </div>
+                <div class="form-check mt-0" style="width: fit-content;" title="把文件作为源代码搜索，而不是解析后的文本。&#10;&#10;如：HTML,如果不作为源代码搜索，则无法搜索到HTML标签，只能搜索到解析后的正文。">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="raw_code_mode">源代码模式</label>
+                    <input type="checkbox" class="form-check-input mt-2" id="raw_code_mode" v-model="rawCodeMode" />
                 </div>
                 <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll" title="搜索任何格式的文件，包括zip等压缩文件，但不包括隐藏文件或二进制文件。&#10;&#10;不勾选此项，只搜索常用文件类型。&#10;&#10;勾选此项，速度最慢。&#10;&#10;勾选此项，将忽略用户指定的文件类别，执行最全面的搜索。">
                     <label class="form-check-label mt-0 pt-0 ht-45" for="">全面搜索</label>
@@ -217,6 +221,15 @@ function isPatternNotOK(pattern) {
   console.log(re.test(pattern));
   return re.test(pattern);
 
+}
+
+function buildRegex(s){
+  // 转义正则特殊字符
+  const escaped = s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // 构造正则：以 escaped 开头，跟随 0 个或多个空格，以中文或英文分号结尾
+  const pattern = `${escaped} *\\|`;
+  return new RegExp(pattern);
 }
 export default {
     methods: {
@@ -470,6 +483,7 @@ export default {
         const selectedIndex= ref(-1) ;
         const homeDir=ref('');
         let timeoutId= null;
+        const rawCodeMode= ref(false);//是否源代码搜索模式
 
         const filterItems=()=> {
             filteredItems.value = items.value.filter(item => item.content.toLowerCase().includes(filenamePattern.value.toLowerCase()) ||
@@ -695,7 +709,7 @@ export default {
 
               return;
             }
-            if(isPatternNotOK(searchPattern.value) && !regexMode.value){
+            if(isPatternNotOK(searchPattern.value) && !regexMode.value && !searchFilename.value){
               alert("搜索关键字过短！\n\n英文字符每关键字至少4个字符，或用Regex模式。汉字长短不限。");
               return;
             } 
@@ -768,7 +782,9 @@ export default {
                     searchBinary: searchBinary.value ,
                     //excludeNotCommon: excludeNotCommon.value,
                     searchAll: searchAll.value,
-                    maxColumn:Number(maxColumn.value), });
+                    maxColumn:Number(maxColumn.value), 
+                    rawCodeMode: rawCodeMode.value,
+                });
             } catch (e) {
                 console.error(e);
             }
@@ -778,11 +794,17 @@ export default {
             try {
                 let folder = await invoke('open_folder_dialog');
                 if (searchPath.value === homeDir.value) {
-                    searchPath.value = folder+" ";
+                    searchPath.value = folder+"  |  ";
                 }else{
                     // 已有不加
-                    if(searchPath.value.search(folder+" ")===-1){
-                        searchPath.value+="  "+folder;
+
+                    let re=buildRegex(folder);
+                    console.log("regex:",re);
+                    console.log("re.test result:",re.test(searchPath.value));
+                    console.log("searchPath:",searchPath.value);
+                    if (!re.test(searchPath.value)){
+                    //if(searchPath.value.search(folder+";")===-1){
+                        searchPath.value+=folder+"  |  ";
                     }
                 }
                 //searchPath.value = folderPath;
@@ -819,7 +841,7 @@ export default {
                 //     getById("alertNewVersionBox").style.display="block";
                 // }
             } catch (e) {
-                console.error(e);
+                console.log(e);
             }
 
             listen('rg-output', event => {    
@@ -946,6 +968,7 @@ export default {
             forceStop,
             homeDir,
             clearPath,
+            rawCodeMode,
         };
     }
 

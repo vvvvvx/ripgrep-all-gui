@@ -37,7 +37,7 @@ const PIP_SEARCH_MAX_HITS: usize = 3; // pip search每个关键字会记录的�
 const MAX_CONTENT_SIZE: usize = 3000; // 命中记录Content字段最大长度
 const MAX_RESULT_CACHE: usize = 100; // 命中结果缓存最大数量
 const EMIT_INTERVAL: u64 = 2; // 前端消息最大推送间隔,秒
-const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml  *.srt *.eml *.sub  *.tex";
+const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.ppt *.pptx *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml  *.srt *.eml *.sub  *.tex";
 //const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml *.epub *.srt *.eml *.sub *.sql *.mobi *.azw *.azw3 *.tex *.vtt";
 
 #[tauri::command]
@@ -73,7 +73,11 @@ fn open_folder_dialog() -> String {
 
 fn split_path_arg(path_arg: &str) -> Vec<String> {
 
-    let mut path_vec:Vec<String>=path_arg.trim().split_whitespace().map(String::from).collect();//.map(|s| s.to_string()).collect().to_vec();
+    // 把中文分号替换为英文分号
+    //let  path_arg=path_arg.replace("；", ";");
+    // 按英文分号分割路径
+    // let mut path_vec:Vec<String>=path_arg.trim().split(';').map(String::from).collect();
+    let mut path_vec:Vec<String>=path_arg.trim().split('|').map(|s| s.trim().to_string()).collect();
 
     //去重
     path_vec.sort();
@@ -149,6 +153,7 @@ async fn run_rg_command(
     //excludeNotCommon: bool, // 是否排除常见压缩文件
     search_all: bool, // 是否搜索所有文件,但不包含隐藏和二进制文件
     max_column: u32,  // 匹配结果最大显示长度，超过将被省略显示
+    raw_code_mode:bool, //是否原始代码搜索模式
 ) -> Result<(), String> {
     // 判断软件是否过期
     let current_date = Local::now().naive_local().date();
@@ -293,6 +298,10 @@ async fn run_rg_command(
     let start = Instant::now();
 
     let mut emit_start=Instant::now();
+
+    //如是原来代码模式，则直接调用rg命令，否则调用rga命令
+    let cmd= if raw_code_mode { "rg" } else { "rga" };
+
     //std::thread::spawn(move || {
     tokio::task::spawn_blocking(move || {
         let is_pip_search = keywords.len() > 1 && !regex_mode;
@@ -306,7 +315,7 @@ async fn run_rg_command(
                 .expect("Failed to send completed message");
         }
         #[cfg(not(windows))]
-        let mut child = Command::new("rga")
+        let mut child = Command::new(cmd)
             .args(rga_args)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -314,7 +323,7 @@ async fn run_rg_command(
             .expect("Failed to start rga command");
 
         #[cfg(windows)]
-        let mut child = Command::new("rga.exe")
+        let mut child = Command::new(cmd)
             .args(rga_args)
             // windows下需要设置不显示命令行窗口
             .creation_flags(0x08000000) // CREATE_NO_WINDOW
@@ -555,6 +564,7 @@ async fn run_rg_command(
                     keywords.to_vec(),
                     file_list.to_vec(),
                     //child,
+                    cmd,
                     "-M ".to_string()
                         + max_column.to_string().as_str()
                         + " -m "
@@ -625,6 +635,7 @@ fn pip_search(
     keywords: Vec<String>,
     mut file_list: Vec<FileRecord>,
     //mut rg_process: Child,
+    cmd:&str,// rga or rg
     addtional_args: String,
     mut pip_keyword_records: Vec<PipKeywordRecord>,
 ) 
@@ -650,7 +661,7 @@ fn pip_search(
             //println!("在文件 {} 中搜索: {}", file.file_path, keywords[i]);
             // 对于每个文件，使用 rg 进行进一步的关键字过滤
             #[cfg(windows)]
-            let mut rg_process = Command::new("rga")
+            let mut rg_process = Command::new(cmd)
                 //.args(addtional_args.split_whitespace().collect::<Vec<&str>>())
                 .args(split_args(&addtional_args))
                 .arg(keyword.clone())
@@ -662,7 +673,7 @@ fn pip_search(
                 .spawn()
                 .expect("Failed to execute rga process");
             #[cfg(not(windows))]
-            let mut rg_process = Command::new("rga")
+            let mut rg_process = Command::new(cmd)
                 //.args(addtional_args.split_whitespace().collect::<Vec<&str>>())
                 .args(split_args(&addtional_args))
                 .arg(keyword.clone())
@@ -883,9 +894,16 @@ struct GiteeRelease {
 #[tauri::command]
 async fn check_update() -> Result<GiteeRelease, String> {
     use reqwest;
-    let url = "https://gitee.com/api/v5/repos/vvvvvx/fast-full-text-search/releases/latest";
-    match reqwest::get(url).await {
+    let url = "https://gitee.com/api/v5/repos/vvvvvx/fast-full-text-search/releases/latest?access_token=c7ebacadf8aa266ec1cd71b271d3f4c3";
+    //let url = "https://api.github.com/repos/vvvvvx/fast-full-text-search/releases/latest";
+    match reqwest::Client::new().get(url)
+        //.header("User-Agent", "fast-full-text-search")
+        //.header("Accept", "application/vnd.github.v3+json")
+        .send()
+        .await {
         Ok(response) => {
+            //let text= response.text().await.unwrap();
+            //println!("check_update Response: {:?}", response);
             if let Ok(release) = response.json::<GiteeRelease>().await {
                 println!("Latest release: {:?}", release);
                 Ok(release)
@@ -913,7 +931,7 @@ fn get_home_dir() -> String {
 
     #[cfg(not(windows))]
     {
-        home_dir.to_str().unwrap().to_string()
+        home_dir.to_str().unwrap().to_string()+"  |  "
     }
 
     #[cfg(windows)]
@@ -926,10 +944,10 @@ fn get_home_dir() -> String {
         for disk in disks.list() {
             //排除C盘
             if !disk.mount_point().to_string_lossy().starts_with(r"C:\") {
-                drives += &(disk.mount_point().to_string_lossy().to_string()+"  ");
+                drives += &(disk.mount_point().to_string_lossy().to_string()+"  |  ");
             }
         }
-        home_dir.to_str().unwrap().to_string()+"   "+&drives
+        home_dir.to_str().unwrap().to_string()+"  |  "+&drives
     }
 }
 
