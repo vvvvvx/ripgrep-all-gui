@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 
 use std::env::consts::OS;
 use std::io::{self, BufRead, BufReader, Read};
+#[cfg(windows)]
 use std::thread::sleep;
+
 use std::time::Duration;
 //use tauri::window;
 //use tauri::{window, EventLoopMessage};
@@ -25,6 +27,7 @@ use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process:: Stdio;
 use std::process::{Command, ExitStatus};
+use std::collections::HashSet;
 // use tauri::Manager;
 
 //use std::sync::{Arc, Mutex};
@@ -62,12 +65,42 @@ fn goto_folder(folder_path: &str) {
     }
 }
 
+fn merge_paths(paths_old:&str,path_new:&str)->String{
+    let path_vec:Vec<&str> = paths_old
+        .split('|')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
+        
+    let mut replace_set=HashSet::new();
+    let mut flag=false;
+    for p in path_vec {
+        if p.starts_with(path_new) || path_new.starts_with(p){
+            replace_set.insert(path_new.to_string());
+            flag=true;
+        } else {
+            replace_set.insert(p.to_string());
+        }
+    }
+    if !flag {
+        replace_set.insert(path_new.to_string());
+    }
+    let mut result : Vec<String> =replace_set.into_iter().collect();
+    result.sort();
+    result.join("  |  ")
+}
+
 #[tauri::command]
-fn open_folder_dialog() -> String {
+fn open_folder_dialog(paths_old:&str) -> String {
     if let Some(path) = FileDialog::new().pick_folder() {
-        path.to_string_lossy().to_string()
+        if paths_old.to_string()==get_home_dir() {
+            path.to_string_lossy().to_string()
+        } else {
+            merge_paths(paths_old, path.to_string_lossy().to_string().as_str())
+        }
     } else {
-        "No folder selected".to_string()
+        //"No folder selected".to_string()
+        paths_old.to_string()
     }
 }
 
@@ -77,7 +110,7 @@ fn split_path_arg(path_arg: &str) -> Vec<String> {
     //let  path_arg=path_arg.replace("；", ";");
     // 按英文分号分割路径
     // let mut path_vec:Vec<String>=path_arg.trim().split(';').map(String::from).collect();
-    let mut path_vec:Vec<String>=path_arg.trim().split('|').map(|s| s.trim().to_string()).collect();
+    let mut path_vec:Vec<String>=path_arg.trim().split('|').map(|s| s.trim()).filter(|s| !s.is_empty()).map(String::from).collect();
 
     //去重
     path_vec.sort();
@@ -224,17 +257,6 @@ async fn run_rg_command(
     //整理rga args
     let mut rga_args = split_args(&rga_str);
 
-    // 处理搜索关键字
-    if regex_mode {
-        println!("Regex:{}", re);
-        rga_args.push("--engine=auto".to_string());
-        rga_args.push("-e".to_string());
-        rga_args.push(search_pattern.to_string());
-    } else if !keywords.is_empty() {
-            rga_args.push("-F".to_string());
-            rga_args.push(keywords[0].to_string());
-        
-    }
     rga_args.push("-M".to_string());
     rga_args.push(max_column.to_string());
 
@@ -254,20 +276,35 @@ async fn run_rg_command(
     //rga_args.append(&mut split_args(&exclude_not_common_str));
     //rga_args.append(&mut split_args(&file_patrn_str));
 
+    rga_args.push("--no-messages".to_string());
+
+
+    // 处理搜索关键字
+    if regex_mode {
+        println!("Regex:{}", re);
+        rga_args.push("--engine=auto".to_string());
+        rga_args.push("-e".to_string());
+        rga_args.push(search_pattern.to_string());
+    } else if !keywords.is_empty() {
+            rga_args.push("-F".to_string());
+            rga_args.push(keywords[0].to_string());
+        
+    }
     //如果仅搜索文件名，则重新制作参数，添加 --files 参数
     if search_filename {
         //清空重新制作
         rga_args.clear();
 
-        rga_args.append(&mut split_args(&file_patrn_str));
         rga_args.push("--files".to_string());
-        rga_args.append(&mut split_args(search_hidden_str));
-        rga_args.append(&mut split_args(&max_depth_str));
-        rga_args.push(search_pattern.to_string());
         rga_args.push("-i".to_string());
         rga_args.push("--glob-case-insensitive".to_string());
+        rga_args.append(&mut split_args(&file_patrn_str));
+        rga_args.append(&mut split_args(search_hidden_str));
+        rga_args.append(&mut split_args(&max_depth_str));
+        // if  !search_pattern.trim().is_empty(){
+        //     rga_args.push(search_pattern.to_string());
+        // }
     }
-    rga_args.push("--no-messages".to_string());
 
     // 加入搜索路径, 多个路径用空格分隔
     // let pathes: Vec<String> = search_path
@@ -1044,6 +1081,15 @@ fn main() {
     //     }
     // }
 
+    // let str1="/home/user/doc/work | /home/user/pic | /home/user";
+    // let str2="/home/user";
+    // let str3="/home/user/audio";    
+    // let str4="/home/user/doc/work/personal";
+
+    // println!("目录：{}",merge_paths(str1, str2));
+    // println!("目录：{}",merge_paths(str1, str3));
+    // println!("目录：{}",merge_paths(str1, str4));
+    
     let app=tauri::Builder::default()
         //窗口居中显示
         .setup(|app| {

@@ -792,21 +792,24 @@ export default {
         const openFolderDialog = async () => {
             
             try {
-                let folder = await invoke('open_folder_dialog');
+                let folder = await invoke('open_folder_dialog',{pathsOld:searchPath.value,});
+                console.log("folder:",folder);
+                searchPath.value=folder;
+                /*
                 if (searchPath.value === homeDir.value) {
                     searchPath.value = folder+"  |  ";
                 }else{
                     // 已有不加
 
                     let re=buildRegex(folder);
-                    console.log("regex:",re);
-                    console.log("re.test result:",re.test(searchPath.value));
-                    console.log("searchPath:",searchPath.value);
+                    //console.log("regex:",re);
+                    //console.log("re.test result:",re.test(searchPath.value));
+                    //console.log("searchPath:",searchPath.value);
                     if (!re.test(searchPath.value)){
                     //if(searchPath.value.search(folder+";")===-1){
                         searchPath.value+=folder+"  |  ";
                     }
-                }
+                }*/
                 //searchPath.value = folderPath;
             } catch (e) {
                 console.error(e);
