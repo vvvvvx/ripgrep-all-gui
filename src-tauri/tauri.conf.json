@@ -7,11 +7,11 @@
   },
   "package": {
     "productName": "极速全文搜索",
-    "version": "1.4.8"
+    "version": "1.5.0"
   },
   "tauri": {
     "allowlist": {
-      "all": true,
+      "all": false,
       "shell": {
         "all": true,
         "open": true

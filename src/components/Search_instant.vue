@@ -148,7 +148,7 @@
                 </tr>
             </tbody>
         </table>
-            </div>
+    </div>
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
@@ -215,7 +215,8 @@ function resetTableHeader() {
 }
 function isPatternNotOK(pattern) {
   // 非汉字字符过短检测，短于3字符的返回true。汉字字符不做检测。
-  let re=/^[ ]*[\x00-\xFF]{1,3}([ ]|$)/;
+//   let re=/^[ ]*[\x00-\xFF]{1,3}([ ]|$)/;
+  let re=/^[ ]*[\x00-\xFF]{1,3}[ ]*$/;
   console.log(pattern);
   console.log(re);
   console.log(re.test(pattern));

@@ -35,13 +35,47 @@ use std::collections::HashSet;
 // 创建一个全局变量来存储子进程的句柄
 //static mut CHILD_PROCESS: Option<Arc<Mutex<Child>>> = None;
 
-const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2026, 12, 30);
+const OVER_DATE: Option<NaiveDate> = NaiveDate::from_ymd_opt(2099, 12, 30);
 const PIP_SEARCH_MAX_HITS: usize = 3; // pip search每个关键字会记录的最大结果数
 const MAX_CONTENT_SIZE: usize = 3000; // 命中记录Content字段最大长度
 const MAX_RESULT_CACHE: usize = 100; // 命中结果缓存最大数量
 const EMIT_INTERVAL: u64 = 2; // 前端消息最大推送间隔,秒
 const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.ppt *.pptx *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml  *.srt *.eml *.sub  *.tex";
 //const COMMON_EXT:&str="*.docx *.pdf *.doc *.wps *.md *.odt *.rtf *.pages *.txt *.csv *.html *.htm *.xhtml *.xml *.epub *.srt *.eml *.sub *.sql *.mobi *.azw *.azw3 *.tex *.vtt";
+
+#[tauri::command]
+fn open_file(file_path: &str) {
+    println!("file_path:{}", file_path);
+    if let Err(e) = that(file_path) {
+        println!("Error opening file: {}", e);
+    }
+}
+
+#[tauri::command]
+fn get_home_dir() -> String {
+    let home_dir = dirs::home_dir().unwrap();
+
+    #[cfg(not(windows))]
+    {
+        home_dir.to_str().unwrap().to_string()+"  |  "
+    }
+
+    #[cfg(windows)]
+    {//如果是Windows则获取所有盘符，排除C盘+用户目录
+        use sysinfo::{Disks, System};
+
+        let mut drives = String::new();
+        let disks = Disks::new_with_refreshed_list(); // 获取所有磁盘
+
+        for disk in disks.list() {
+            //排除C盘
+            if !disk.mount_point().to_string_lossy().starts_with(r"C:\") {
+                drives += &(disk.mount_point().to_string_lossy().to_string()+"  |  ");
+            }
+        }
+        home_dir.to_str().unwrap().to_string()+"  |  "+&drives
+    }
+}
 
 #[tauri::command]
 fn goto_folder(folder_path: &str) {
@@ -955,40 +989,6 @@ async fn check_update() -> Result<GiteeRelease, String> {
     }
 }
 #[tauri::command]
-fn open_file(file_path: &str) {
-    println!("file_path:{}", file_path);
-    if let Err(e) = that(file_path) {
-        println!("Error opening file: {}", e);
-    }
-}
-
-#[tauri::command]
-fn get_home_dir() -> String {
-    let home_dir = dirs::home_dir().unwrap();
-
-    #[cfg(not(windows))]
-    {
-        home_dir.to_str().unwrap().to_string()+"  |  "
-    }
-
-    #[cfg(windows)]
-    {//如果是Windows则获取所有盘符，排除C盘+用户目录
-        use sysinfo::{Disks, System};
-
-        let mut drives = String::new();
-        let disks = Disks::new_with_refreshed_list(); // 获取所有磁盘
-
-        for disk in disks.list() {
-            //排除C盘
-            if !disk.mount_point().to_string_lossy().starts_with(r"C:\") {
-                drives += &(disk.mount_point().to_string_lossy().to_string()+"  |  ");
-            }
-        }
-        home_dir.to_str().unwrap().to_string()+"  |  "+&drives
-    }
-}
-
-#[tauri::command]
 fn kill_rga_process(window: tauri::Window) {
     //println!("rga process cleanning");
     #[cfg(windows)]
@@ -1062,34 +1062,7 @@ fn kill_rga_process_fn() {
  use tauri::Manager ;
 
 fn main() {
-    
-    // if OS == "windows" {
-    //     // 检查并安装 Scoop
-    //     if !is_scoop_installed() {
-    //         if let Err(e) = install_scoop() {
-    //             eprintln!("Error installing Scoop: {}", e);
-    //             return;
-    //         }
-    //     }
 
-    //     // 检查并安装 rga
-    //     if !is_rga_installed() {
-    //         if let Err(e) = install_rga() {
-    //             eprintln!("Error installing rga: {}", e);
-    //             return;
-    //         }
-    //     }
-    // }
-
-    // let str1="/home/user/doc/work | /home/user/pic | /home/user";
-    // let str2="/home/user";
-    // let str3="/home/user/audio";    
-    // let str4="/home/user/doc/work/personal";
-
-    // println!("目录：{}",merge_paths(str1, str2));
-    // println!("目录：{}",merge_paths(str1, str3));
-    // println!("目录：{}",merge_paths(str1, str4));
-    
     let app=tauri::Builder::default()
         //窗口居中显示
         .setup(|app| {
