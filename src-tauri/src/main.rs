@@ -127,7 +127,7 @@ fn merge_paths(paths_old:&str,path_new:&str)->String{
 #[tauri::command]
 fn open_folder_dialog(paths_old:&str) -> String {
     if let Some(path) = FileDialog::new().pick_folder() {
-        if paths_old.to_string()==get_home_dir() {
+        if paths_old==get_home_dir() {
             path.to_string_lossy().to_string()
         } else {
             merge_paths(paths_old, path.to_string_lossy().to_string().as_str())
@@ -221,6 +221,7 @@ async fn run_rg_command(
     search_all: bool, // 是否搜索所有文件,但不包含隐藏和二进制文件
     max_column: u32,  // 匹配结果最大显示长度，超过将被省略显示
     raw_code_mode:bool, //是否原始代码搜索模式
+    multi_line:bool, //是否跨行搜索模式
 ) -> Result<(), String> {
     // 判断软件是否过期
     let current_date = Local::now().naive_local().date();
@@ -312,7 +313,10 @@ async fn run_rg_command(
 
     rga_args.push("--no-messages".to_string());
 
-
+    if multi_line {
+        rga_args.push("-U".to_string());
+        rga_args.push("--multiline-dotall".to_string());
+    }
     // 处理搜索关键字
     if regex_mode {
         println!("Regex:{}", re);
@@ -788,8 +792,8 @@ fn pip_search(
                         result_records.push(Record {
                             hit_count: total_lines as u32,
                             file: file2.file_path.clone(),
-                            created_at: created_at,
-                            modified_at: modified_at,
+                            created_at,
+                            modified_at,
                             content: file2.content.clone()
                                 + "————————————————"
                                 + &keywords[i]
@@ -839,7 +843,7 @@ fn pip_search(
                         let mut lines = String::new();
                         let _ = reader.read_to_string(&mut lines).unwrap();
                         if !lines.trim().is_empty() {
-                            eprintln!("Pip_srearch() running rga process Error : {}", &lines);
+                            eprintln!("Pip_srearch() running rga process Error : {}", lines);
                         }
                 }
 
@@ -954,7 +958,8 @@ fn emit_completed_signal(window: tauri::Window, status: ExitStatus) {
 fn emit_signal(window: tauri::Window, signal: &str, message: &str) {
     window
         .emit(signal, Some(message.to_string()))
-        .expect(format!("Failed to send {} message", signal).as_str());
+        .unwrap_or_else(|_| panic!("Failed to send {} message", signal))
+        //.expect(format!("Failed to send {} message", signal).as_str());
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -1015,7 +1020,7 @@ fn kill_rga_process(window: tauri::Window) {
                 let mut lines = String::new();
                 let _ = reader.read_to_string(&mut lines).unwrap();
                 if !lines.trim().is_empty() {
-                    eprintln!("Error killing rga process: {}", &lines);
+                    eprintln!("Error killing rga process: {}", lines);
                 }
         }
         eprintln!("Error killing rga process: {}", status);
@@ -1050,7 +1055,7 @@ fn kill_rga_process_fn() {
                 let mut lines = String::new();
                 let _ = reader.read_to_string(&mut lines).unwrap();
                 if !lines.trim().is_empty() {
-                    eprintln!("Error killing rga process: {}", &lines);
+                    eprintln!("Error killing rga process: {}", lines);
                 }
         }
         eprintln!("Error killing rga process: {}", status);
@@ -1093,12 +1098,8 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
 
-        app.run(|_app_handle, event, | { match event {
-            tauri::RunEvent::ExitRequested { .. }=> {
+        app.run(|_app_handle, event, | { if let tauri::RunEvent::ExitRequested { .. } = event {
                 kill_rga_process_fn();
-            }
-            _ => {}
-            
         }
 });
 

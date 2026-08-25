@@ -49,20 +49,24 @@
         <div class="row " style="margin-left: 0.2rem;margin-top:3px;min-width: 960px;">
             <div class="col-11 " style="display: flex;flex-wrap: wrap;gap:15px;padding-left: 0px;max-width: 91.66%;min-width: 900px;">
                 <div class="form-check mt-0" style="width: fit-content;" title="只搜索文件名，不搜索内容。">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-file-name">只搜文件名</label>
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-file-name">搜文件名</label>
                     <input type="checkbox" class="form-check-input mt-2" id="search-file-name" v-model="searchFilename" />
                 </div>
                 <div class="form-check mt-0" style="width: fit-content;" title="默认不搜索隐藏文件，勾选此项，将搜索隐藏文件">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-hidden">搜隐藏文件</label>
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-hidden">隐藏文件</label>
                     <input type="checkbox" class="form-check-input mt-2" id="search-hidden" v-model="searchHidden" />
                 </div>
                 <div class="form-check mt-0" style="width: fit-content;" title="把二进制文件作为文本搜索&#10;&#10;速度较慢，输出内容可能包含非法字符。">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">搜二进制文件</label>
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">二进制</label>
                     <input type="checkbox" class="form-check-input mt-2" id="search-binary" v-model="searchBinary" />
                 </div>
                 <div class="form-check mt-0" style="width: fit-content;" title="把文件作为源代码搜索，而不是解析后的文本。&#10;&#10;如：HTML,如果不作为源代码搜索，则无法搜索到HTML标签，只能搜索到解析后的正文。">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="raw_code_mode">源代码模式</label>
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="raw_code_mode">源码模式</label>
                     <input type="checkbox" class="form-check-input mt-2" id="raw_code_mode" v-model="rawCodeMode" />
+                </div>
+                <div class="form-check mt-0" style="width: fit-content;" title="高级正则模式下，先行或后行断言时，进行跨行多关键字匹配。&#10;&#10;注意：速度将变慢！">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="multi_line">跨行匹配</label>
+                    <input type="checkbox" class="form-check-input mt-2" id="multi_line" v-model="multiLine" />
                 </div>
                 <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll" title="搜索任何格式的文件，包括zip等压缩文件，但不包括隐藏文件或二进制文件。&#10;&#10;不勾选此项，只搜索常用文件类型。&#10;&#10;勾选此项，速度最慢。&#10;&#10;勾选此项，将忽略用户指定的文件类别，执行最全面的搜索。">
                     <label class="form-check-label mt-0 pt-0 ht-45" for="">全面搜索</label>
@@ -261,6 +265,7 @@ export default {
         const searchBinary = ref(false); // 是否把二进制文件作为文本搜索
         //const excludeNotCommon=ref(true); // 是否排除不常用且耗时的图片、压缩文件、数据库、视频文件
         const searchAll = ref(false); // 是否搜索所有文件
+        const multiLine = ref(false); // 是否启用跨行搜索模式
         ////begin 新加
         const isDone=ref(true); //搜索是否执行结束
         const displayCreatedAt=ref(false); //是否显示创建时间
@@ -785,6 +790,7 @@ export default {
                     searchAll: searchAll.value,
                     maxColumn:Number(maxColumn.value), 
                     rawCodeMode: rawCodeMode.value,
+                    multiLine: multiLine.value,
                 });
             } catch (e) {
                 console.error(e);
@@ -963,6 +969,7 @@ export default {
             displayModifiedAt,
             maxColumn,
             searchAll,
+            multiLine,
             latestVersion,
             latestVersionDesc,
             curVersion,
