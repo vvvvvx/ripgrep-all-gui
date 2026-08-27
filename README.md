@@ -1,130 +1,163 @@
-# 极速全文搜索
+# ripgrep-all-gui
 
-> 开发者：Viaco  
-> 邮&emsp;件：viaco.xu@qq.com
+>Developer: Viaco  
+>Email: viaco.xu@qq.com
 
-无需知道**文件位置**或**文件名**，只需记得文件内的**某个词**或**几个字**，它就可帮你找到。
+You don’t need to know the file location or file name. As long as you remember a word or a few words contained in the file, this software can help you find it.
 
-这是一款在海量硬盘数据里快速搜索文件内容的全文搜索软件，即**文件内容**搜索，也可用它搜文件名。可直接搜索zip内部文本而无需解压。可搜索的文件包括：**各种压缩文件、Office、电子书、SQLite、PDF、电影字幕，及其他任何文本文件**，甚至可搜索exe程序内部文本。
+This is a high-performance full-text search tool designed to quickly search through huge amounts of data on your hard drive. It searches file contents, and can also search file names.
+
+It can search text inside ZIP archives without extracting them first.
+
+Supported file types include various archive formats, Office documents, e-books, SQLite databases, PDFs, movie subtitles, and virtually any other text-based files. It can even search for text embedded inside EXE programs.
 
 
-## 特点 
 
-1. **无索引**
+## Features 
 
-主流全文搜索软件都采用索引方式，索引体积几个G起步，且会不断增长。本软件无需索引。
+1. **No Indexing**
 
-2. **速度快**
+Most mainstream full-text search applications rely on indexing. Their indexes can take up several gigabytes of disk space and continue growing over time.
 
-本软件采用Rust语言开发，性能接近C语言。虽无法做到索引搜索的速度，但在无索引全文搜索中一定是非常快的。除了程序性能高，还因为它会调用全部CPU资源多线程、满负荷、并行搜索。
+This software requires no index at all.
 
-3. **高级搜索**
+2. **Fast**
 
-对普通用户，可以输入单个或多关键字组合搜索。对于高级用于可以使用正则表达式搜索。搭配文件类型通配符，可实现任何复杂的搜索逻辑。  <b style="color:red" >界面简约，但功能不简单！</b>
+The software is written in Rust, with performance close to that of C.
 
-4. **结果齐全**
+Although it cannot match the speed of an indexed search, it is designed to be extremely fast for a non-indexed full-text search tool.
 
-经与某主流全文搜索软件对比，相同关键字下，本软件搜索结果更多。
+In addition to its high-performance implementation, it utilizes all available CPU resources and performs searches using multiple threads in parallel, allowing the CPU to run at full load when necessary.
 
-5. **跨平台** 
+3. **Advanced Search**
 
-同时支持Windows和Linux操作系统。
+For ordinary users, you can simply enter a single keyword or combine multiple keywords.
 
-6. **使用方便**
+For advanced users, regular expressions are supported. Combined with file-type wildcards, this allows you to implement virtually any complex search logic.
 
-有使用不明白的地方，鼠标悬浮于相关位置，会弹出使用说明。
+The interface is simple, but the functionality is anything but simple!
 
-## 用法
-### 1. 基本操作
-【&emsp;&emsp;点击文件名】：打开文件  
-【点击文件夹图标】：进入文件目录  
-【&emsp;&emsp;&emsp;点击表头】：按命中次数、修改时间、创建时间、文件名排序  
-【&emsp;&emsp;&emsp;鼠标停留】：显示相应帮助信息。在文件名上停留，显示命中关键字内容预览。  
+4. **Comprehensive Results**
+
+Compared with a mainstream full-text search application, this software returned more search results for the same keywords in our tests.
+
+5. **Cross-Platform** 
+
+Supports both Windows and Linux.
+
+6. **Easy to Use**
+
+If you are unsure how to use a particular feature, simply hover your mouse over the relevant area to display helpful instructions.
+
+7. **Multi-Language Support**
+   
+
+![multi language](./README_CN.assets/multi-lang.png)
+
+## Usage
+
+### 1. Basic Operations
+
+* Click a file name: Open the file.
+* Click the folder icon: Open the file’s directory.
+* Click a column header: Sort by hit count, modification time, creation time, or file name.
+* Hover the mouse: Display relevant help information. Hovering over a file name displays a preview of the matched content.
 
 ![image-20250317193013026](./README_CN.assets/image-20250317193013026.png)
 
-### 2. 普通搜索
+### 2. Normal Search
 
- 【&emsp;搜索位置 】：Z盘根目录  
- 【&emsp;文件类别 】：所有docx和pdf文件，但排除文件名中含“艺”字的文件。  
- 【搜索关键字 】：[数学]  
- 【&emsp;输出结果 】：找出了28个正文内包含“数学”的docx和pdf文件   
+* Search location: Root directory of drive Z:  
+* File types: All docx and pdf files, excluding files whose names contain the character 艺.  
+* Search keyword: 数学  
+* Result: 28 DOCX and PDF files containing 数学 in their contents were found.  
 
    ![image-20250317160231297](./README_CN.assets/image-20250317160231297.png)
 
-### 3. 管道搜索
+### 3. Pipeline Search
 
- 【&emsp;搜索位置 】：Z:\downnload  
- 【&emsp;文件类别 】：未指定  [ 指定会更快 ]  
- 【搜索关键字 】：[安全 节日 通知]，三关键字组合  
- 【&emsp;输出结果 】：  
+* Search location: Z:\download  
+* File types: Not specified.  Specifying file types can make the search faster.  
+* Search keywords: [安全 节日 通知] — a combination of three keywords.  
+* Result:
 
-        1. 检测到多关键字组合搜索，自动启动管道搜索模式。
-        2. 行状态可看出，在z:\download下找到29个包含“安全”的文件，在29个文件中找到4个包含“节日”的文件，从4个文件中找到3个儿包含“通知”的文件。同时包含三个关键字的文件最终只有3个。
-        3. 把鼠标放到第二条搜索结果上，弹出结果预览信息。可以看到该文件中“安全”出现了16次，并摘取了3行提供预览；“节日”出现了2次，“通知”出现了1次。   
+  1. The software detects a multi-keyword search and automatically switches to Pipeline Search Mode.
+  2. The search status shows the filtering process: 29 files containing 安全 were found under Z:\download; among those 29 files, 4 also contain 节日; among those 4 files, 3 also contain 通知. Therefore, only 3 files contain all three keywords.
+  3. Hover over the second search result to display a content preview. You can see that 安全 appears 16 times in the file, with 3 matching lines extracted for preview. 节日 appears twice, while 通知 appears once.  
 
    ![image-20250317162831287](./README_CN.assets/image-20250317162831287.png)
 
-### 4. 正则搜索
+### 4. Regular Expression Search
 
- 【&emsp;搜索位置 】：Z:\Program Files(x86)  
- 【&emsp;文件类型 】：搜索所有docx、pdf和epub文件  
- 【搜索关键字 】：正则表达式“\d{4}年\d{1,2}月\d{1,2}日”，表示：4位数+年+1或2位数+月+1或2位数+日，即搜日期。  
- 【 输出结果 】：  
+* Search location: Z:\Program Files(x86)  
+* File types: All docx, pdf, and epub files.  
+* Search keyword: The regular expression  `\d{4}年\d{1,2}月\d{1,2}日`
 
+This means:
+
+* 4 digits + 年
+* 1 or 2 digits + 月
+* 1 or 2 digits + 日
+
+In other words, it searches for dates such as 2025年3月17日.
+
+* Result:
 ```
-   1. 搜到92条内容包含日期的文件。  
-   1. 把鼠标放到命中次数为6的结果上，弹出命中结果预览。可以看到日期分别在文件的Page1、Page10、Page36、Page38、Page42共出现了6次。  
+1. 92 files containing dates were found.
+2. Hovering over a result with 6 matches displays a preview. The dates can be seen on Page 1, Page 10, Page 36, Page 38, and Page 42, with a total of 6 matches.
 ```
-
-   注意：<b style="color:red">要开启正则搜索，需勾选“Regex”复选框</b>
+Note: To enable regular expression searching, you must check the Regex checkbox.
 
 ![image-20250317170934348](./README_CN.assets/image-20250317170934348.png)
 
-### 5. 文件名搜索
+### 5. File Name Search
 
-  【&emsp;搜索位置 】：Z:\  
-  【&emsp;文件类别 】：未指定  
-  【搜索关键字 】：[加强.*通知]  
-  【&emsp;输出结果 】：把文件名中同时包含“加强”和“通知”，且“加强”在前“通知”在后的所有文件全部找出来了。
+* Search location: Z:\  
+File types: Not specified.  
+Search keyword: 加强\.\*通知  
+Result: All files whose names contain 加强 followed later by 通知, with any number of characters in between, are found.
 
-   注意：  
-      <b style="color:red;">启用文件名搜索，须勾选“只搜索文件名”复选框。  </b>  详见下图。
+Note:
+To search file names, you must check the “Search File Names Only” checkbox.
 
-   说明：  
-         1. 文件名搜索默认支持正则表达式，正则表达式中英文句号**“.”**表示任意字符，星号**“\*”**表示前面的任意字符可以出现任意次。
-         2. 所以**“加强.\*通知”**的意思就是：“**加强**”和“**通知**”之间可以出现任意字符，且数量不限。
-         3. 如果不懂正则表达式，可以直接输入“**加强**”或“**通知**”即可。将把文件名包含“加强“或”通知“的所有文件找出来。
+How It Works
+
+  1. File name search supports regular expressions by default. In a regular expression, the dot . represents any character, while the asterisk * means that the preceding character or expression can occur any number of times.
+  2. Therefore, 加强.*通知 means that the file name contains 加强 followed by 通知, with any number of characters in between.
+  3. If you don’t understand regular expressions, you can simply enter 加强 or 通知. The software will find all file names containing 加强 or 通知.
 
    ![](./README_CN.assets/image-20250317173718266.png)
 
-### 6. [文件名+文件内容] 组合搜索
+### 6. Combined [File Name + File Content] Search
 
-搜索目的：  
-希望在/home/user位置搜文件名包含“报告”的任何扩展名文件，文件内容包含“财务决算”的文件。
+* Search goal:
 
-  【&emsp;搜索位置 】：/home/user 
-  【&emsp;文件类别 】：[\*报告\*]  （如果只搜docx，则写为： \*报告\*.docx）  
-  【搜索关键字 】：[财务决算]  
-  【&emsp;输出结果 】：搜索结果的文件名全部包含了“报告”，且搜出了docx和pdf两种扩展名，鼠标停留在结果上可以看到，文件内容全部包含了“财务决算”。
+Search /home/user for files whose file name contains 报告 and whose file content contains 财务决算, regardless of file extension.
+
+* Search location: /home/user  
+* File type:  \*报告\*  (If you only want to search DOCX files:\*报告\*.docx)  
+* Search keyword: 财务决算  
+* Result: All returned files have 报告 in their file names. Both DOCX and PDF files are found.  Hovering over a result shows that the file content contains 财务决算.
 
 ![image-20250320091038955](./README_CN.assets/image-20250320091038955.png)
 
-### 7. 其他技巧
+7. Other Tips
 
-其中还包含了很多功能，请把鼠标悬浮到你想了解的功能位置，会有详细说明。
+There are many other features available.
 
-## 安装
+Simply hover your mouse over a feature you want to learn about, and detailed instructions will be displayed.
 
-### 1. Windows安装
+## Installation
 
-下载压缩包，解压后双击运行即可。
+1. Windows
 
-### 2. Linux安装
+Download the compressed package, extract it, and double-click the executable to run the software.
 
-自行安装rga（ripgrep-all）工具，安装配置方法请自行搜索，然后下载本软件运行即可。
+2. Linux
 
-## 编译
+Install the rga (ripgrep-all) tool yourself. Search online for installation and configuration instructions, then download and run this software.
 
-cd src-tauri  
+## Build
+
+cd src-tauri
 npm run tauri build

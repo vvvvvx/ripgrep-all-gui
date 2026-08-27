@@ -3,19 +3,19 @@
         <div class="row" style="min-width: 1000px;">
             <div class="col-6 ht-45">
                 <div class="input-group mb-0 mt-0 ">
-                    <span class="input-group-text dark-mode ht-45">搜索位置</span>
-                    <input class="form-control dark-mode ht-45" v-model="searchPath" id="inputPath" @contextmenu.prevent="clearPath" placeholder="Enter search path"
-                        title="搜索根目录&#10;&#10;全盘搜索时间也不会太久，&#10;但缩小搜索范围，会大大缩短搜索时间。&#10;&#10;可用'|'分隔多个目录或盘符，例如：&#10;或 C | D | E &#10;或 C: | D: | E: &#10;或 C:\ | D:\ | E:\&#10;或 D:\文件 | E:\日记 | F:&#10;&#10;鼠标右击清空，再右击恢复初始，点击“...”选择目录。"/>
-                    <button class="btn btn-secondary pt-1 ht-45" @click="openFolderDialog" style="padding-left: 7px;padding-right: 5px;" title="点击选择搜索根路径"><img src="/src/assets/folder.svg"  width="24" height="24"
+                    <span class="input-group-text dark-mode ht-45">{{ $t('search_location_label') }}</span>
+                    <input class="form-control dark-mode ht-45"  v-model="searchPath" id="inputPath" @contextmenu.prevent="clearPath" :placeholder="$t('search_location_placeholder')"
+                        :title= "$t('search_location_title')" />
+                    <button class="btn btn-secondary pt-1 ht-45" @click="openFolderDialog" style="padding-left: 7px;padding-right: 5px;" :title="$t('search_location_button_title')"><img src="/src/assets/folder.svg"  width="24" height="24"
                                 alt="Icon"></button>
                 </div>
                 <div class="input-group mb-1 mt-0 ">
-                    <span class="input-group-text dark-mode mt-2 ht-45 d-flex">文件类别</span>
+                    <span class="input-group-text dark-mode mt-2 ht-45 d-flex">{{ $t('search_filetype_label') }}</span>
                     <!--新加Begin-->
                     <div class="form-control dropdown mt-2 ht-45  flex-column" style="padding: 0%;" @click="handleDropdownClick"> 
-                        <input  class=" dark-mode mt-0  w-100 ht-43" ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" placeholder="默认空，搜常用类别。例：*.docx  *.pdf 。指定类别，速度倍增。" 
-                        title="【文件类别】，即在哪些类别的文件中搜索内容，通常由扩展名决定。&#10;&#10;1. 输入指定类别时，则只搜该类别的文件，速度最快；&#10;2. 留空时，搜常用类别：Office、PDF、Markdown、Txt、网页、eml、LaTeX等，速度较慢；&#10;3. 勾选【全面搜索】时，搜所有类别文件(不含二进制和隐藏文件)，速度最慢。 &#10;&#10;不建议留空，明确文件类别，可成倍提高搜索速度。&#10;&#10;可空格分隔多个类别。&#10;通配符*表任意字符。例：&#10;*.docx *.pdf  表示只搜索扩展名为 docx 和 pdf 的两类文件。&#10;*研究报告*  表示只搜索文件名包含“研究报告”的任何类型文件。&#10;*研究报告*.pdf   表示只搜索文件名包含“研究报告”的 pdf 文件。&#10;&#10;叹号 !，表示排除，例如：&#10;!*.txt 表示搜索会排除扩展名为 txt 的文件。&#10;!*研究报告* 表示搜索会排除文件名包含“研究报告”的任何类型文件。&#10;!*研究报告*.pdf 表示搜索会排除文件名包含“研究报告”的 pdf 文件。">
-                        <div v-if="filteredItems.length" class="dropdown-list"  title="✔ Include 包含 此特征&#9;✘ Exclude 排除 此特征&#10;&#10;点击复选框/Ctrl+Space切换&#10;&#10;上下方向键选中，鼠标点击/Enter确认">
+                        <input  class=" dark-mode mt-0  w-100 ht-43" ref="inputFilePattern" id="inputFilePattern" v-model="filenamePattern"  style="border: none;padding-left: 10px;" @click="handleDropdownClick" @input="filterItems" @keydown="handleKeydown" :placeholder=" $t('search_filetype_placeholder')" 
+                        :title="$t('search_filetype_title')">
+                        <div v-if="filteredItems.length" class="dropdown-list"  :title="$t('search_filetype_droplist_title')">
 
                     <!---<button class="btn btn-primary  pt-2 ht-30" @click="openFolderDialog" title="点击选择搜索根路径">添加</button> -->
                             <div v-for="(item, index) in filteredItems" :key="index" @click="selectItem(item)" :class="{'selected': index === selectedIndex}" class="dropdown-item">
@@ -26,89 +26,89 @@
                         </div>
                   </div>
                     <!--  新加End  ✘✔━—㊀㊉＋－-->
-                        <button class="btn btn-secondary mt-2 pt-1 ht-45" @click="clearFilePattern" title="点击清除文件类别">C</button>
+                        <button class="btn btn-secondary mt-2 pt-1 ht-45" @click="clearFilePattern" :title="$t('clear_filetype_button_title')">C</button>
                 </div>
             </div>
             <div class="col-6 ">
                 <div class="input-group mb-0 mt-0 ">
                     <div class="border-light  mt-2">
                         <div class="form-switch d-flex flex-column align-items-end mt-1" style="margin-right: 0.6rem;margin-left:1px;padding-left:1px;"
-                            title="勾选此项，启用正则表达式模式。&#9;&#10;勾选后，右侧框输入内容将被视为正则表达式">
+                            :title="$t('regex_title')">
                             <input type="checkbox" class="form-check-input mt-3" role="switch" id="regex-mode" v-model="regexMode" />
                             <label class="form-check-label d-block text-start mt-1 pt-0 ht-45" for="regex-mode">Regex </label>
                         </div>
                     </div>
                     <!--    <span class="input-group-text dark-mode">搜索模式</span> -->
-                    <input class="form-control dark-mode  mt-1 ht-45 search-input" id="searchPatternInput" v-model="searchPattern" @keydown="handleSearchKeydown" placeholder="全文搜索关键字  如：市场调研 销售数据 人工智能"
-                        title="全文搜索关键字&#10;&#10;1. 支持正则表达式（需开启Regex模式）。&#10;2. 普通模式：即单关键字搜索，最常用！&#10;3. 管道模式：空格分隔多关键字，将漏斗式逐关键字过滤，较耗时。&#10;&#10;注意：&#10;管道模式下，低频关键字靠前放有利于缩短搜索时间&#10;管道模式下，每关键字最多显示三次命中结果，仅显示最后关键字的命中次数。&#10;&#10;正则说明：&#10;1. 全文搜索时，支持高级正则模式先行和后行断言，如：(?=.*K1)(?=.*K2)(?=.*K3)&emsp; 表示字符串同时含K1、K2、K3&#10;2. 仅搜文件名 时，默认为普通正则模式，不必勾选Regex" />
+                    <input class="form-control dark-mode  mt-1 ht-45 search-input" id="searchPatternInput" v-model="searchPattern" @keydown="handleSearchKeydown" :placeholder="$t('search_pattern_placeholder')"
+                        :title="$t('search_pattern_title')" />
                     <button class="btn btn-success mt-1 pt-1 ht-45 search-button" @click="runCommand"
-                        title="为缩短搜索时间，程序会多线程并发搜索。&#10;因此，CPU占用率很高是正常现象！">搜索</button>
+                        :title="$t('search_button_title')">{{ $t('search_label') }}</button>
                 </div>
             </div>
         </div>
         <div class="row " style="margin-left: 0.2rem;margin-top:3px;min-width: 960px;">
             <div class="col-11 " style="display: flex;flex-wrap: wrap;gap:15px;padding-left: 0px;max-width: 91.66%;min-width: 900px;">
-                <div class="form-check mt-0" style="width: fit-content;" title="只搜索文件名，不搜索内容。">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-file-name">搜文件名</label>
+                <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_filename_title')">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-file-name">{{ $t('checkbox_filename_label') }}</label>
                     <input type="checkbox" class="form-check-input mt-2" id="search-file-name" v-model="searchFilename" />
                 </div>
-                <div class="form-check mt-0" style="width: fit-content;" title="默认不搜索隐藏文件，勾选此项，将搜索隐藏文件">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-hidden">隐藏文件</label>
+                <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_hidden_title')">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-hidden">{{ $t('checkbox_hidden_label') }}</label>
                     <input type="checkbox" class="form-check-input mt-2" id="search-hidden" v-model="searchHidden" />
                 </div>
-                <div class="form-check mt-0" style="width: fit-content;" title="把二进制文件作为文本搜索&#10;&#10;速度较慢，输出内容可能包含非法字符。">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">二进制</label>
+                <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_binary_title')">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-binary">{{ $t('checkbox_binary_label') }}</label>
                     <input type="checkbox" class="form-check-input mt-2" id="search-binary" v-model="searchBinary" />
                 </div>
-                <div class="form-check mt-0" style="width: fit-content;" title="把文件作为源代码搜索，而不是解析后的文本。&#10;&#10;如：HTML,如果不作为源代码搜索，则无法搜索到HTML标签，只能搜索到解析后的正文。">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="raw_code_mode">源码模式</label>
+                <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_rawcode_title')">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="raw_code_mode">{{ $t('checkbox_rawcode_label') }}</label>
                     <input type="checkbox" class="form-check-input mt-2" id="raw_code_mode" v-model="rawCodeMode" />
                 </div>
-                <div class="form-check mt-0" style="width: fit-content;" title="高级正则模式下，先行或后行断言时，进行跨行多关键字匹配。&#10;&#10;注意：速度将变慢！">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="multi_line">跨行匹配</label>
+                <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_multiline_title')">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="multi_line">{{ $t('checkbox_multiline_label') }}</label>
                     <input type="checkbox" class="form-check-input mt-2" id="multi_line" v-model="multiLine" />
                 </div>
-                <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll" title="搜索任何格式的文件，包括zip等压缩文件，但不包括隐藏文件或二进制文件。&#10;&#10;不勾选此项，只搜索常用文件类型。&#10;&#10;勾选此项，速度最慢。&#10;&#10;勾选此项，将忽略用户指定的文件类别，执行最全面的搜索。">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="">全面搜索</label>
-                    <input type="checkbox" class="form-check-input mt-2"   v-model="searchAll" />
+                <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll" :title="$t('checkbox_fullsearch_title')">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="search-all">{{ $t('checkbox_fullsearch_label') }}</label>
+                    <input type="checkbox" class="form-check-input mt-2" id="search-all"   v-model="searchAll" />
                 </div>
                 <div class="input-group mt-0" style="width: fit-content;"
-                    title="单个文件中出现的关键字次数达到[最大匹配次数]后，程序将不再搜索此文件，以提高效率。&#10;&#10;0 表示无限制。&#10;过大可能会导致搜索时间过长。">
+                    :title="$t('input_maxcount_title')">
                 <!--    <label class="form-check-label mt-0 pt-0 ht-45" for="max-count" style="width: fit-content;">最大匹配次数：</label>-->
-                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">匹配次数</span>
+                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">{{ $t('input_maxcount_label') }}</span>
                     <input class="form-control dark-mode mt-0 ht-30" id="max-count" v-model="maxCount"
                         style="width: 50px;" />
                 </div>
 
                 <div class=" input-group mt-0" style="width: fit-content;" 
-                    title="目录遍历深度&#10;&#10;1-表示当前文件夹&#10;2-表示当前文件夹及子文件夹&#10;3-表示当前文件夹及子文件夹及子文件夹...&#10;&#10;深度越大，耗时越长">
-                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">遍历深度</span>
+                    :title="$t('input_depth_title')">
+                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">{{ $t('input_depth_label') }}</span>
                     <input class="form-control dark-mode mt-0 ht-30" id="max-depth" v-model="maxDepth"
                         style="width: 50px;" />
                 </div>
                 
-                <div class=" input-group mt-0" style="width: fit-content;" title="匹配结果行预览最大字符数，超过此长度将被截断，并省略显示。">
-                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">预览长度</span>
+                <div class=" input-group mt-0" style="width: fit-content;" :title="$t('input_maxcolumn_title')">
+                    <span class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">{{ $t('input_maxcolumn_label') }}</span>
                     <input class="form-control dark-mode mt-0 ht-30" id="max-column" v-model="maxColumn"
                         style="width: 50px;" />
                 </div>
 
             </div>
             <div class="col-1 justify-content-end" style="display: flex;gap:2px;padding-left: 0px;">
-                <button class="btn  mt-0 pt-1 ht-30 btn-warning" @click="forceStop" style="width: 65px;" title="强制终止当前搜索">终止</button>
+                <button class="btn  mt-0 pt-1 ht-30 btn-warning" @click="forceStop" style="width: 65px;" :title="$t('stop_button_title')">{{ $t('stop_button_label') }}</button>
             </div>
 
             <div style="display: inline-flex;position: absolute;bottom: 0;gap: 0.5rem;padding-left:0px;padding-right: 0px; width:calc(100% - 280px);">
-                <label for="">执行状态：</label><label :class="['text-success', (isDone || isPipMode) ? '':'blink' ]" for=""><b>{{ cmdStatus }}</b></label>
-                &ensp;&ensp;<label>搜索结果：{{ output.length }} 条</label>
+                <label for="">{{ $t('status_searching_label') }}</label><label :class="['text-success', (isDone || isPipMode) ? '':'blink' ]" for=""><b>{{ cmdStatus }}</b></label>
+                &ensp;&ensp;<label>{{ $t('status_searching_output_label') }}{{ output.length }} {{ $t('status_results_records') }}</label>
             </div>
             <div style="display: flex;justify-content:flex-end;align-items:center; gap: 0.5rem;padding-right: 15px;" class="parent-container">
-                <div class="form-check mt-0" style="width: fit-content;" title="显示搜索结果文件创建时间">
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="display-created-at">显示创建时间</label>
+                <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_display_createdate_title')">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="display-created-at">{{ $t('checkbox_display_createdate_label') }}</label>
                     <input type="checkbox" class="form-check-input mt-2" id="display-created-at" v-model="displayCreatedAt" />
                 </div>
-                <div class="form-check mt-0" style="width: fit-content;" title="显示搜索结果文件修改时间">  
-                    <label class="form-check-label mt-0 pt-0 ht-45" for="display-modified-at">显示修改时间</label>
+                <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_display_modifiedate_title')">
+                    <label class="form-check-label mt-0 pt-0 ht-45" for="display-modified-at">{{ $t('checkbox_display_modifiedate_label') }}</label>
                     <input type="checkbox" class="form-check-input mt-2" id="display-modified-at" v-model="displayModifiedAt" />
                 </div>
 
@@ -124,15 +124,15 @@
         <table class="table  table-sm text-white " v-show="output.length > 0">
             <thead style="position: sticky; top: 0; background-color: #333;">
                 <tr>
-                    <th class="text-start fs-6 " style="width: 20px;">目录</th>
-                    <th class="text-end fs-6 " style="width: 20px;" title="点击按命中次数排序">
-                        <a href="#" @click.prevent="sortOutputByHitCount" id="sort-by-hit-count"> 命中- </a>
+                    <th class="text-start fs-6 " style="width: 20px;">{{ $t('table_col_dir_label') }}</th>
+                    <th class="text-end fs-6 " style="width: 20px;" :title="$t('table_col_hits_title')">
+                        <a href="#" @click.prevent="sortOutputByHitCount" id="sort-by-hit-count"> {{ $t('table_col_hits_label') }} </a>
                     </th>
 
-                    <th class="text-center fs-6 " v-show="displayModifiedAt" style="width: 40px;" title="点击按修改时间排序"><a href="#" @click.prevent="sortOutputByModified" id="sort-by-modified">修改时间-</a></th>
-                    <th class="text-center fs-6 " v-show="displayCreatedAt" style="width: 40px;" title="点击按创建时间排序"><a href="#" @click.prevent="sortOutputByCreated" id="sort-by-created">创建时间-</a></th>
-                    <th class="text-start fs-6 " title="点击按文件名排序">
-                        <a href="#" @click.prevent="sortOutputByFile" id="sort-by-file">&emsp;文件- </a>
+                    <th class="text-center fs-6 " v-show="displayModifiedAt" style="width: 40px;" :title="$t('table_col_modifiedat_title')"><a href="#" @click.prevent="sortOutputByModified" id="sort-by-modified"> {{ $t('table_col_modifiedat_label') }} </a></th>
+                    <th class="text-center fs-6 " v-show="displayCreatedAt" style="width: 40px;" :title="$t('table_col_createdat_title')"><a href="#" @click.prevent="sortOutputByCreated" id="sort-by-created"> {{ $t('table_col_createdat_label') }} </a></th>
+                    <th class="text-start fs-6 " :title="$t('table_col_file_title')">
+                        <a href="#" @click.prevent="sortOutputByFile" id="sort-by-file">&emsp;{{ $t('table_col_file_label') }} </a>
                     </th>
 
                 </tr>
@@ -140,12 +140,12 @@
 
             <tbody>
                 <tr v-for="line in output" :key="line.file">
-                    <td class="text-end fs-6 " title="转到文件所在目录"><a class="no-underline " href="#"
+                    <td class="text-end fs-6 " :title="$t('table_item_dir_title')"><a class="no-underline " href="#"
                             @click.prevent="gotoFolder(line.file)"><img src="/src/assets/folder.svg" class="icon"
                                 alt="Icon"></a></td>
-                    <td class="text-end fs-6 " title="关键字在该文件中的出现次数/命中次数&#10;&#10;受限于【最大匹配次数】设置">{{ line.hit_count }}</td>
-                    <td class="text-center fs-6 " v-show="displayModifiedAt" style="width: 40px;" title="">{{ line.modified_at}}</td>
-                    <td class="text-center fs-6 " v-show="displayCreatedAt" style="width: 40px;" title="">{{ line.created_at}}</td>
+                    <td class="text-end fs-6 " :title="$t('table_item_hits_title')">{{ line.hit_count }}</td>
+                    <td class="text-center fs-6 " v-show="displayModifiedAt" style="width: 40px;" :title="$t('table_item_modifiedat_title')">{{ line.modified_at}}</td>
+                    <td class="text-center fs-6 " v-show="displayCreatedAt" style="width: 40px;" :title="$t('table_item_createdat_title')">{{ line.created_at}}</td>
                     <td class="text-start fs-6 "><a class="no-underline " href="#" @click.prevent="openFile(line.file)"
                             :title="line.content"> {{ line.file }} </a></td>
 
@@ -153,52 +153,91 @@
             </tbody>
         </table>
     </div>
+    <div class="container-fluid fixed-bottom py-1" style="min-width: 1000px; max-width: 100%; background-color: #333; z-index: 1050; border-top: 1px solid #444;height:28px;">
+        <div class="row align-items-center justify-content-between px-3 g-0 h-100 ">
+            <div class="col-auto d-flex align-items-center h-100">
+                <div class="lang-switch d-flex align-items-center small">
+                    <!-- 💡 使用 @click.prevent 阻止超連結的預設跳轉行為 -->
+                    <a 
+                    href="#" 
+                    class="text-decoration-none mx-2 fs-6" 
+                    :class="curLang==='zh' ? 'text-success fw-bold' : 'text-secondary'"
+                    @click.prevent="changeLang('zh')"
+                    >
+                    中文
+                    </a>
+                    
+                    <span class="text-muted opacity-50">|</span>
+                    
+                    <a 
+                     href="#" 
+                        class="text-decoration-none mx-2 fs-6" 
+                        :class="curLang === 'en' ? 'text-success fw-bold' : 'text-secondary'"
+                        @click.prevent="changeLang('en')"
+                    >
+                    English
+                    </a>
+                </div>
+            </div>
+            <div class="col-auto text-white fs-6 h-100 align-items-center d-flex">
+                <div class="col-auto">
+                    <span :title="$t('developed_by_title')"> <a href="https://github.com/vvvvvx/ripgrep-all-gui" target="_blank">Developed by Viaco.</a>&emsp; Email : 106324221@qq.com&emsp;</span><span :class="[(curVersion < latestVersion && latestVersion!='') ?  'blink':'']" v-html="versionText" :title="versionTitle"></span>
+                </div>
+            </div>
+        </div>
+         
+    </div>
+   <!-- 
     <div class="container-fluid min-vh-100 d-flex flex-column ">
         <div class="row justify-content-end">
             <div class="col-auto">
-            <!--<span>Version: {{ curVersion }} &emsp; Developed by Viaco.&emsp; Email : viaco.xu@qq.com&emsp;Download：https://gitee.com/vvvvvx/fast-full-text-search</span> -->
-            <span title="点我访问软件主页，可提Bug或建议。"> <a href="https://gitee.com/vvvvvx/fast-full-text-search" target="_blank">Developed by Viaco.</a>&emsp; Email : 106324221@qq.com&emsp;</span><span :class="[(curVersion < latestVersion && latestVersion!='') ?  'blink':'']" v-html="versionText" :title="versionTitle"></span>
-        </div>
+            <span :title="$t('developed_by_title')"> <a href="https://github.com/vvvvvx/ripgrep-all-gui" target="_blank">Developed by Viaco.</a>&emsp; Email : 106324221@qq.com&emsp;</span><span :class="[(curVersion < latestVersion && latestVersion!='') ?  'blink':'']" v-html="versionText" :title="versionTitle"></span>
+            </div>
         </div>
     </div>
+-->
     <div id="alertBox" class="custom-alert" >
-        <span style=" font-weight: bold;" class="fs-5 text-warning ">{{ searchAll ? '全面搜索，极耗时！' :'【文件类别】未指定' }} </span><br><br>
-      {{ searchAll ? '搜索【所有类别】的文件，速度最慢，请耐心等待...':'搜索【常用类别】文件，速度可能较慢！ 请耐心等待...'}}<br><br>
-      <span class="red-text">指定文件类别，速度倍增！</span><br><br><br>
+        <span style=" font-weight: bold;" class="fs-5 text-warning ">{{ searchAll ? $t('msg_text_full_search_very_slow') : $t('msg_text_filetype_empty') }} </span><br><br>
+      {{ searchAll ? $t('msg_text_all_type_slow') : $t('msg_text_common_type_slow') }}<br><br>
+      <span class="red-text">{{ $t('msg_text_input_filetype_to_speedup') }}</span><br><br><br>
       
-      <button @click="closeCustomAlert" id="closeAlertBtn" class="btn btn-primary">确定</button>
+      <button @click="closeCustomAlert" id="closeAlertBtn" class="btn btn-primary">{{ $t('button_text_ok') }}</button>
     
     </div>
     <div id="alertRuningBox" class="custom-alert" >
-      <span style="font-weight: bold;" class="fs-5 text-warning ">{{ isDone ? '搜索完成！':'当前搜索未结束！'}}</span><br>
-      <span style="font-weight: bold;" class="fs-5 text-warning">{{ isDone ? '':'请耐心等待...'}}</span><br><br>
-      {{ isDone ? '请点击取消':'是否强行终止？'}}
+      <span style="font-weight: bold;" class="fs-5 text-warning ">{{ isDone ? $t('msg_text_search_done') : $t('msg_text_search_not_finished') }}</span><br>
+      <span style="font-weight: bold;" class="fs-5 text-warning">{{ isDone ? '' : $t('msg_text_be_patient') }}</span><br><br>
+      {{ isDone ? $t('msg_text_click_cancel') : $t('msg_text_if_force_stop') }}
       <br><br>
       <div class="d-flex justify-content-between">
-      <button @click="forceKillSearch" id="forceKillBtn" class="btn btn-primary">终止</button>
-      <button @click="closeRuningAlert" id="closeRuningAlertBtn" class="btn btn-primary">取消</button>
+      <button @click="forceKillSearch" id="forceKillBtn" class="btn btn-primary">{{ $t('button_text_force_stop') }}</button>
+      <button @click="closeRuningAlert" id="closeRuningAlertBtn" class="btn btn-primary">{{ $t('button_text_cancel') }}</button>
       </div>
     
     </div>
     <div id="alertNewVersionBox" class="custom-alert" >
-      <span style="font-weight: bold;" class="fs-5">有新版本发布！</span><br><br>
-      <span  > 当前版本：{{ curVersion }} &emsp; 最新版本：{{ latestVersion }}</span><br>
-      请前往 <a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank">https://gitee.com/vvvvvx/fast-full-text-search/releases</a> 下载！<br>
+      <span style="font-weight: bold;" class="fs-5">{{ $t('msg_text_new_version_found') }}</span><br><br>
+      <span  > {{ $t('msg_text_current_version') }}{{ curVersion }} &emsp; {{ $t('msg_text_latest_version') }}{{ latestVersion }}</span><br>
+      {{ $t('msg_text_please_go') }} <a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank">https://gitee.com/vvvvvx/fast-full-text-search/releases</a> {{ $t('msg_text_download') }}<br>
       
       <br><br>
-      <button @click="closeNewVersionAlert" id="closeNewVersionAlertBtn" class="btn btn-primary">确定</button>
+      <button @click="closeNewVersionAlert" id="closeNewVersionAlertBtn" class="btn btn-primary">{{ $t('button_text_ok') }}</button>
     
     </div>
 
 </template>
 
-<script>
+<script >
 import { invoke } from '@tauri-apps/api/tauri';
 import { nextTick, onBeforeUnmount, onMounted,onUnmounted, ref,computed } from 'vue';
 import { listen } from '@tauri-apps/api/event';
 import { el, tr } from 'vuetify/locale';
 import { getVersion } from '@tauri-apps/api/app';
 import { homeDir } from '@tauri-apps/api/path';
+import { useI18n } from 'vue-i18n';
+
+
+
 
 
 function getById(id) {
@@ -212,10 +251,10 @@ function resetTableHeader() {
     let hc = getById("sort-by-hit-count") ;
     let mt = getById("sort-by-modified");
     let ct = getById("sort-by-created");
-    sf.innerText = "文件-";
-    hc.innerText = "命中-";
-    mt.innerText = "修改时间-";
-    ct.innerText = "创建时间-";
+    sf.innerText = t('table_col_file_label'); //"文件-";
+    hc.innerText = t('table_col_hit_count_label'); // "命中-";
+    mt.innerText = t('table_col_modifiedat_label'); // "修改时间-";
+    ct.innerText = t('table_col_createdat_label'); // "创建时间-";
 }
 function isPatternNotOK(pattern) {
   // 非汉字字符过短检测，短于3字符的返回true。汉字字符不做检测。
@@ -249,6 +288,9 @@ export default {
         
     },
     setup() {
+        const i18n = useI18n();
+        const {t} =useI18n();
+        const curLang =computed(() => i18n.locale.value);
         const searchPattern = ref(''); // 搜索模式
         const output = ref([]); // 搜索结果数组
         const searchPath = ref(''); // 搜索路径
@@ -275,8 +317,8 @@ export default {
         const curVersion=ref(''); //当前版本号
         const latestVersion=ref(''); //最新版本号
         const latestVersionDesc=ref(''); //最新版本描述
-        const versionText=computed(()=>{return ((curVersion.value.toLowerCase() < latestVersion.value.toLowerCase()) && latestVersion.value!='') ?  `<a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank" style="text-decoration:none;color:green;">有新版本，点我下载！</a>`:`<a href="https://gitee.com/vvvvvx/fast-full-text-search/releases" target="_blank" style="text-decoration:none;color:white;">Version: ${curVersion.value}</a>` ;}); //版本号显示文本
-        const versionTitle=computed(()=>{return ((curVersion.value.toLowerCase() < latestVersion.value.toLowerCase()) && latestVersion.value!='') ? `当前版本：${curVersion.value}  最新版本：${latestVersion.value} \n\n新版本更新：\n${latestVersionDesc.value}`:"点击我查看版本更新信息。"}); //版本号鼠标悬停提示
+        const versionText=computed(()=>{return ((curVersion.value.toLowerCase() < latestVersion.value.toLowerCase()) && latestVersion.value!='') ?  `<a href="https://github.com/vvvvvx/ripgrep-all-gui/releases" target="_blank" style="text-decoration:none;color:green;">New version available!</a>`:`<a href="https://github.com/vvvvvx/ripgrep-all-gui/releases" target="_blank" style="text-decoration:none;color:white;">Version: ${curVersion.value}</a>` ;}); //版本号显示文本
+        const versionTitle=computed(()=>{return ((curVersion.value.toLowerCase() < latestVersion.value.toLowerCase()) && latestVersion.value!='') ? `Current version：${curVersion.value}  Latest：${latestVersion.value} \n\nVersion update：\n${latestVersionDesc.value}`:"Click me to view version information"}); //版本号鼠标悬停提示
 
         const items= ref([
             { include: true, type: 'ada', content: '*.adb *.ads' },
@@ -491,6 +533,20 @@ export default {
         let timeoutId= null;
         const rawCodeMode= ref(false);//是否源代码搜索模式
 
+        const changeLang= (lang) => {
+            i18n.locale.value = lang
+            localStorage.setItem('lang', lang)
+        }
+        const resetTableHeader = () => {
+            let sf = getById("sort-by-file");
+            let hc = getById("sort-by-hit-count") ;
+            let mt = getById("sort-by-modified");
+            let ct = getById("sort-by-created");
+            sf.innerText = t('table_col_file_label'); 
+            hc.innerText = t('table_col_hits_label'); 
+            mt.innerText = t('table_col_modifiedat_label'); 
+            ct.innerText = t('table_col_createdat_label'); 
+        };
         const filterItems=()=> {
             filteredItems.value = items.value.filter(item => item.content.toLowerCase().includes(filenamePattern.value.toLowerCase()) ||
             item.type.toLowerCase().includes(filenamePattern.value.toLowerCase()) );
@@ -600,19 +656,23 @@ export default {
             let hc = getById("sort-by-hit-count");
             //let sf = getById("sort-by-file");
 
-            if (hc.innerText === "命中-") {
+            //let text=curLang.value==="zh"?"命中":"Hits";
+            let text=t('table_col_hits_label').slice(0,-1); //去掉最后的符号
+
+
+            if (hc.innerText === text+"-") {
                 //↑↓
                 //descending
                 resetTableHeader();
-                hc.innerText = "命中↓";
+                hc.innerText = text+"↓";
                 output.value.sort((a, b) => b.hit_count - a.hit_count);
-            } else if (hc.innerText === "命中↓") {
+            } else if (hc.innerText === text+"↓") {
                 //ascending   
-                hc.innerText = "命中↑";
+                hc.innerText = text+"↑";
                 output.value.sort((a, b) => a.hit_count - b.hit_count);
             } else {
                 //descending
-                hc.innerText = "命中↓";
+                hc.innerText = text+"↓";
                 output.value.sort((a, b) => b.hit_count - a.hit_count);
             }
             //sf.innerText = "文件-";
@@ -622,18 +682,21 @@ export default {
             let sf = getById("sort-by-file");
             //let hc = getById("sort-by-hit-count");
 
-            if (sf.innerText === "文件-") {
+            //let text=curLang.value==="zh"?"文件":"File"; 
+            let text=t('table_col_file_label').slice(0,-1); //去掉最后的符号
+
+            if (sf.innerText === text+"-") {
                 //ascending
                 resetTableHeader();
-                sf.innerText = "文件↑";
+                sf.innerText = text+"↑";
                 output.value.sort((a, b) => a.file.localeCompare(b.file));
-            } else if (sf.innerText === "文件↑") {
+            } else if (sf.innerText === text+"↑") {
                 //descending
-                sf.innerText = "文件↓";
+                sf.innerText = text+"↓";
                 output.value.sort((a, b) => b.file.localeCompare(a.file));
             } else {
                 //ascending
-                sf.innerText = "文件↑";
+                sf.innerText = text+"↑";
                 output.value.sort((a, b) => a.file.localeCompare(b.file));
             }
 
@@ -642,36 +705,39 @@ export default {
         };
         const sortOutputByCreated = () => {
             let sc = getById("sort-by-created");
-            if (sc.innerText === "创建时间-") {
+            let text=t('table_col_createdat_label').slice(0,-1); //去掉最后的符号
+            if (sc.innerText === text+"-") {
                 //ascending
                 resetTableHeader();
-                sc.innerText = "创建时间↑";
+                sc.innerText = text+"↑";
                 output.value.sort((a, b) => a.created_at.localeCompare(b.created_at));
-            } else if (sc.innerText === "创建时间↑") {
+            } else if (sc.innerText === text+"↑") {
                 //descending
-                sc.innerText = "创建时间↓";
+                sc.innerText = text+"↓";
                 output.value.sort((a, b) => b.created_at.localeCompare(a.created_at));
             } else {
                 //ascending
-                sc.innerText = "创建时间↑";
+                sc.innerText = text+"↑";
                 output.value.sort((a, b) => a.created_at.localeCompare(b.created_at));
             }
             scrollToTop();
         };
         const sortOutputByModified = () => {
             let sm = getById("sort-by-modified");
-            if (sm.innerText === "修改时间-") {
+            let text=t('table_col_modifiedat_label').slice(0,-1); //去掉最后的符号
+
+            if (sm.innerText === text+"-") {
                 //ascending
                 resetTableHeader();
-                sm.innerText = "修改时间↑";
+                sm.innerText = text+"↑";
                 output.value.sort((a, b) => a.modified_at.localeCompare(b.modified_at));
-            } else if (sm.innerText === "修改时间↑") {
+            } else if (sm.innerText === text+"↑") {
                 //descending
-                sm.innerText = "修改时间↓";
+                sm.innerText = text+"↓";
                 output.value.sort((a, b) => b.modified_at.localeCompare(a.modified_at));
             } else {
                 //ascending
-                sm.innerText = "修改时间↑";
+                sm.innerText = text+"↑";
                 output.value.sort((a, b) => a.modified_at.localeCompare(b.modified_at));
             }
 
@@ -681,10 +747,10 @@ export default {
             if(!searchAll.value){
                 searchAll.value=true;
                 filenamePattern.value="";
-                getById("inputFilePattern").placeholder="执行[全面搜索]，忽略指定类别。最全面也最慢！";
+                getById("inputFilePattern").placeholder=t('search_filetype_fullsearch_label'); //"执行[全面搜索]，忽略指定类别。最全面也最慢！";
             }else{
                 searchAll.value=false;
-                getById("inputFilePattern").placeholder="默认空，搜常用类别。例：*.zip  *.pdf 。指定类别，速度倍增。";
+                getById("inputFilePattern").placeholder=t('search_filetype_placeholder');//"默认空，搜常用类别。例：*.zip  *.pdf 。指定类别，速度倍增。";
             }
         };
         const forceKillSearch=async ()=>{
@@ -697,12 +763,13 @@ export default {
         }
         const forceStop=async ()=>{
             if(!isDone.value){
-                let confirmResult =await confirm("确定要终止当前搜索？");
+                let confirmResult =await confirm(t('msg_stop_confirm')); //confirm("确定要终止当前搜索？");
                 if( confirmResult){
                     forceKillSearch();
                 }
             }else{
-                alert("当前无搜索任务进行。");
+                //alert("当前无搜索任务进行。");
+                alert(t('msg_no_task')); //"当前无搜索任务进行。"
             }
         }
         const runCommand =async () => {
@@ -716,35 +783,42 @@ export default {
               return;
             }
             if(isPatternNotOK(searchPattern.value) && !regexMode.value && !searchFilename.value){
-              alert("搜索关键字过短！\n\n英文字符每关键字至少4个字符，或用Regex模式。汉字长短不限。");
+              //alert("搜索关键字过短！\n\n英文字符每关键字至少4个字符，或用Regex模式。汉字长短不限。");
+              alert(t('msg_keyword_too_short')); //"搜索关键字过短！\n\n英文字符每关键字至少4个字符，或用Regex模式。汉字长短不限。"
               return;
             } 
             if (searchPattern.value === '' && !searchFilename.value) {    //if search pattern is empty, show error message and return
-                alert('搜索关键字不能为空');
+               // alert('搜索关键字不能为空');
+                alert(t('msg_keyword_cant_blank')); //"搜索关键字不能为空"
                 return;
             }
 
             if (searchPath.value === '') {    //if search path is empty, show error message and return  
-                alert('搜索路径不能为空');
+                //alert('搜索路径不能为空');
+                alert(t('msg_search_location_cant_blank')); //"搜索位置不能为空"
                 return;
             }
             //处理路径中的空格，进行转义。
             // searchPath.value = searchPath.value.replace(/ /g, '\\ ');
 
             if (searchFilename.value && filenamePattern.value.trim() === '' && searchPattern.value.trim() === '') {
-                alert('搜索文件名时，搜索模式和文件名特征不能同时为空');
+                //alert('搜索文件名时，搜索模式和文件名特征不能同时为空');
+                alert(t('msg_keyword_and_filetype_all_blank')); //"搜索文件名时，搜索模式和文件名特征不能同时为空"
                 return;
             }
             if (isNaN(maxCount.value) || maxCount.value < 0) {
-                alert('最大匹配次数必须为0，或正整数');
+                //alert('最大匹配次数必须为0，或正整数');
+                alert(t('msg_maxcount_invalid')); //"最大匹配次数必须为0，或正整数"
                 return;
             }
             if (isNaN(maxDepth.value) || maxDepth.value < 0) {
-                alert('目录遍历深度必须正整数');
+                //alert('目录遍历深度必须正整数');
+                alert(t('msg_depth_invalid')); //"目录遍历深度必须正整数"
                 return;
             }
             if (isNaN(maxColumn.value) || maxColumn.value < 0) {
-                alert('匹配行最大显示长度必须为正整数');
+                //alert('匹配行最大显示长度必须为正整数');
+                alert(t('msg_maxcolumn_invalid')); //"匹配行最大显示长度必须为正整数"
                 return;
             }
             
@@ -756,20 +830,20 @@ export default {
             isPipMode.value=false;
             isDone.value=false;
 
-            let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
-            let ptrn = t.filter(item => item.trim() !== '');//remove empty string
+            let keywordsArr = searchPattern.value.trim().split(' ');//split search pattern into two keywords
+            let ptrn = keywordsArr.filter(item => item.trim() !== '');//remove empty string
 
             output.value = [];//clear output before running new command
             // reset 表头排序
             resetTableHeader();
             preFile.value = "";//reset preFile before running new command
             if (ptrn.length > 1 && !regexMode.value ) {
-                cmdStatus.value = "管道模式中(较耗时)...";
+                cmdStatus.value = t('status_pipe_mode_label'); //"管道模式中(较耗时)...";
                 //isPipMode.value=true;
             }else if (searchFilename.value){
-                cmdStatus.value = "文件名搜索中...";
+                cmdStatus.value = t('status_filename_mode_label'); //"文件名搜索中...";
             }else{
-                cmdStatus.value = "全文搜索中...";
+                cmdStatus.value = t('status_fulltext_search_mode_label'); //"全文搜索中...";
             }
             //强制更新页面 显示搜索进度
             await nextTick();
@@ -791,6 +865,7 @@ export default {
                     maxColumn:Number(maxColumn.value), 
                     rawCodeMode: rawCodeMode.value,
                     multiLine: multiLine.value,
+                    curLang: curLang.value
                 });
             } catch (e) {
                 console.error(e);
@@ -864,20 +939,20 @@ export default {
 
             listen('rg-process-killed', event => {
                 console.log(event.payload);
-                cmdStatus.value = event.payload;
+                cmdStatus.value = t(event.payload) ;
                 isDone.value=true;
-                alert(event.payload);
+                alert(t(event.payload));
             });
 
             listen('completed', event => {
-                let t = searchPattern.value.trim().split(' ');//split search pattern into two keywords
-                let ptrn = t.filter(item => item.trim() !== '');//remove empty string
+                let keywordsArr = searchPattern.value.trim().split(' ');//split search pattern into two keywords
+                let ptrn = keywordsArr.filter(item => item.trim() !== '');//remove empty string
 
                 if (ptrn.length > 1 && regexMode.value === false) {                    
                     //cmdStatus.value +="->("+output.value.length + ")->完成" ;
-                    cmdStatus.value += "->完成" ;
+                    cmdStatus.value += t('status_search_done_label'); //"->完成" ;
                 }else{
-                    cmdStatus.value = event.payload;
+                    cmdStatus.value = t(event.payload);
                 }
                 isDone.value=true;
                 closeRuningAlert();
@@ -900,7 +975,7 @@ export default {
                 //alert(OS);
             });
             listen('overdate', event => {
-                alert(event.payload);
+                alert(t(event.payload));
                 console.log(event.payload);
                 //alert(OS);
             });
@@ -925,6 +1000,11 @@ export default {
         //end 新加
 
         return {
+            changeLang,
+            resetTableHeader,
+            i18n,
+           
+            curLang,
             searchPattern,
             searchPath,
             runCommand,
