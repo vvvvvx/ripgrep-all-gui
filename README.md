@@ -159,5 +159,5 @@ Install the rga (ripgrep-all) tool yourself. Search online for installation and 
 
 ## Build
 
-cd src-tauri
+npm install  
 npm run tauri build

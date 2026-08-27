@@ -131,5 +131,5 @@
 
 ## 编译
 
-cd src-tauri  
+npm install  
 npm run tauri build
