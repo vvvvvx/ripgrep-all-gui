@@ -1,0 +1,269 @@
+<div class="header " style="z-index: 1000;min-width: 1000px;">
+    <div class="row" style="min-width: 1000px;">
+        <div class="col-6 ht-45">
+            <div class="input-group mb-0 mt-0 ">
+                <span class="input-group-text dark-mode ht-45">{{ $t('search_location_label') }}</span>
+                <input class="form-control dark-mode ht-45" v-model="searchPath" id="inputPath"
+                    @contextmenu.prevent="clearPath" :placeholder="$t('search_location_placeholder')"
+                    :title="$t('search_location_title')" />
+                <button class="btn btn-secondary pt-1 ht-45" @click="openFolderDialog"
+                    style="padding-left: 7px;padding-right: 5px;" :title="$t('search_location_button_title')"><img
+                        src="/src/assets/folder.svg" width="24" height="24" alt="Icon"></button>
+            </div>
+            <div class="input-group mb-1 mt-0 ">
+                <span class="input-group-text dark-mode mt-2 ht-45 d-flex">{{ $t('search_filetype_label') }}</span>
+                <!--新加Begin-->
+                <div class="form-control dropdown mt-2 ht-45  flex-column" style="padding: 0%;"
+                    @click="handleDropdownClick">
+                    <input class=" dark-mode mt-0  w-100 ht-43" ref="inputFilePattern" id="inputFilePattern"
+                        v-model="filenamePattern" style="border: none;padding-left: 10px;" @click="handleDropdownClick"
+                        @input="filterItems" @keydown="handleKeydown" :placeholder=" $t('search_filetype_placeholder')"
+                        :title="$t('search_filetype_title')">
+                    <div v-if="filteredItems.length" class="dropdown-list"
+                        :title="$t('search_filetype_droplist_title')">
+
+                        <!---<button class="btn btn-primary  pt-2 ht-30" @click="openFolderDialog" title="点击选择搜索根路径">添加</button> -->
+                        <div v-for="(item, index) in filteredItems" :key="index" @click="selectItem(item)"
+                            :class="{'selected': index === selectedIndex}" class="dropdown-item">
+                            <span class="push-button" @click.stop="togglePush(item)"
+                                :style="{ color: item.include ? 'green' : 'red' }">{{ item.include ? '✔' : '✘' }}</span>
+                            <span class="list-type">{{ item.type }}</span>
+                            <span class="list-content">{{ item.content }}</span>
+                        </div>
+                    </div>
+                </div>
+                <!--  新加End  ✘✔━—㊀㊉＋－-->
+                <button class="btn btn-secondary mt-2 pt-1 ht-45" @click="clearFilePattern"
+                    :title="$t('clear_filetype_button_title')">C</button>
+            </div>
+        </div>
+        <div class="col-6 ">
+            <div class="input-group mb-0 mt-0 ">
+                <div class="border-light  mt-2">
+                    <div class="form-switch d-flex flex-column align-items-end mt-1"
+                        style="margin-right: 0.6rem;margin-left:1px;padding-left:1px;" :title="$t('regex_title')">
+                        <input type="checkbox" class="form-check-input mt-3" role="switch" id="regex-mode"
+                            v-model="regexMode" />
+                        <label class="form-check-label d-block text-start mt-1 pt-0 ht-45" for="regex-mode">Regex
+                        </label>
+                    </div>
+                </div>
+                <!--    <span class="input-group-text dark-mode">搜索模式</span> -->
+                <input class="form-control dark-mode  mt-1 ht-45 search-input" id="searchPatternInput"
+                    v-model="searchPattern" @keydown="handleSearchKeydown"
+                    :placeholder="$t('search_pattern_placeholder')" :title="$t('search_pattern_title')" />
+                <button class="btn btn-success mt-1 pt-1 ht-45 search-button" @click="runCommand"
+                    :title="$t('search_button_title')">{{ $t('search_label') }}</button>
+            </div>
+        </div>
+    </div>
+    <div class="row " style="margin-left: 0.2rem;margin-top:3px;min-width: 960px;">
+        <div class="col-11 "
+            style="display: flex;flex-wrap: wrap;gap:15px;padding-left: 0px;max-width: 91.66%;min-width: 900px;">
+            <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_filename_title')">
+                <label class="form-check-label mt-0 pt-0 ht-45"
+                    for="search-file-name">{{ $t('checkbox_filename_label') }}</label>
+                <input type="checkbox" class="form-check-input mt-2" id="search-file-name" v-model="searchFilename" />
+            </div>
+            <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_hidden_title')">
+                <label class="form-check-label mt-0 pt-0 ht-45"
+                    for="search-hidden">{{ $t('checkbox_hidden_label') }}</label>
+                <input type="checkbox" class="form-check-input mt-2" id="search-hidden" v-model="searchHidden" />
+            </div>
+            <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_binary_title')">
+                <label class="form-check-label mt-0 pt-0 ht-45"
+                    for="search-binary">{{ $t('checkbox_binary_label') }}</label>
+                <input type="checkbox" class="form-check-input mt-2" id="search-binary" v-model="searchBinary" />
+            </div>
+            <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_rawcode_title')">
+                <label class="form-check-label mt-0 pt-0 ht-45"
+                    for="raw_code_mode">{{ $t('checkbox_rawcode_label') }}</label>
+                <input type="checkbox" class="form-check-input mt-2" id="raw_code_mode" v-model="rawCodeMode" />
+            </div>
+            <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_multiline_title')">
+                <label class="form-check-label mt-0 pt-0 ht-45"
+                    for="multi_line">{{ $t('checkbox_multiline_label') }}</label>
+                <input type="checkbox" class="form-check-input mt-2" id="multi_line" v-model="multiLine" />
+            </div>
+            <div class="form-check mt-0" style="width: fit-content;" @click="toggleSearchAll"
+                :title="$t('checkbox_fullsearch_title')">
+                <label class="form-check-label mt-0 pt-0 ht-45"
+                    for="search-all">{{ $t('checkbox_fullsearch_label') }}</label>
+                <input type="checkbox" class="form-check-input mt-2" id="search-all" v-model="searchAll" />
+            </div>
+            <div class="input-group mt-0" style="width: fit-content;" :title="$t('input_maxcount_title')">
+                <!--    <label class="form-check-label mt-0 pt-0 ht-45" for="max-count" style="width: fit-content;">最大匹配次数：</label>-->
+                <span
+                    class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">{{ $t('input_maxcount_label') }}</span>
+                <input class="form-control dark-mode mt-0 ht-30" id="max-count" v-model="maxCount"
+                    style="width: 50px;" />
+            </div>
+
+            <div class=" input-group mt-0" style="width: fit-content;" :title="$t('input_depth_title')">
+                <span
+                    class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">{{ $t('input_depth_label') }}</span>
+                <input class="form-control dark-mode mt-0 ht-30" id="max-depth" v-model="maxDepth"
+                    style="width: 50px;" />
+            </div>
+
+            <div class=" input-group mt-0" style="width: fit-content;" :title="$t('input_maxcolumn_title')">
+                <span
+                    class="input-group-text dark-mode border-0 mt-0 ht-30 d-flex fs-6 toolbar-span">{{ $t('input_maxcolumn_label') }}</span>
+                <input class="form-control dark-mode mt-0 ht-30" id="max-column" v-model="maxColumn"
+                    style="width: 50px;" />
+            </div>
+
+        </div>
+        <div class="col-1 justify-content-end" style="display: flex;gap:2px;padding-left: 0px;">
+            <button class="btn  mt-0 pt-1 ht-30 btn-warning" @click="forceStop" style="width: 65px;"
+                :title="$t('stop_button_title')">{{ $t('stop_button_label') }}</button>
+        </div>
+
+        <div
+            style="display: inline-flex;position: absolute;bottom: 0;gap: 0.5rem;padding-left:0px;padding-right: 0px; width:calc(100% - 280px);">
+            <label for="">{{ $t('status_searching_label') }}</label><label
+                :class="['text-success', (isDone || isPipMode) ? '':'blink' ]" for=""><b>{{ cmdStatus }}</b></label>
+            &ensp;&ensp;<label>{{ $t('status_searching_output_label') }}{{ output.length }}
+                {{ $t('status_results_records') }}</label>
+        </div>
+        <div style="display: flex;justify-content:flex-end;align-items:center; gap: 0.5rem;padding-right: 15px;"
+            class="parent-container">
+            <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_display_createdate_title')">
+                <label class="form-check-label mt-0 pt-0 ht-45"
+                    for="display-created-at">{{ $t('checkbox_display_createdate_label') }}</label>
+                <input type="checkbox" class="form-check-input mt-2" id="display-created-at"
+                    v-model="displayCreatedAt" />
+            </div>
+            <div class="form-check mt-0" style="width: fit-content;" :title="$t('checkbox_display_modifiedate_title')">
+                <label class="form-check-label mt-0 pt-0 ht-45"
+                    for="display-modified-at">{{ $t('checkbox_display_modifiedate_label') }}</label>
+                <input type="checkbox" class="form-check-input mt-2" id="display-modified-at"
+                    v-model="displayModifiedAt" />
+            </div>
+
+        </div>
+    </div>
+</div>
+<!--
+    <div class="sidebar " >
+        <button class="btn btn-primary mt-1 p-1 pt-1 ht-45" style="width: 45px;"  @click="sortOutput" title="搜索结果排序">↑↓</button>
+    </div>
+       -->
+<div class="content scrollable flex-height" id="outputTable">
+    <table class="table  table-sm text-white " v-show="output.length > 0">
+        <thead style="position: sticky; top: 0; background-color: #333;">
+            <tr>
+                <th class="text-start fs-6 " style="width: 20px;">{{ $t('table_col_dir_label') }}</th>
+                <th class="text-end fs-6 " style="width: 20px;" :title="$t('table_col_hits_title')">
+                    <a href="#" @click.prevent="sortOutputByHitCount" id="sort-by-hit-count">
+                        {{ $t('table_col_hits_label') }} </a>
+                </th>
+
+                <th class="text-center fs-6 " v-show="displayModifiedAt" style="width: 40px;"
+                    :title="$t('table_col_modifiedat_title')"><a href="#" @click.prevent="sortOutputByModified"
+                        id="sort-by-modified"> {{ $t('table_col_modifiedat_label') }} </a></th>
+                <th class="text-center fs-6 " v-show="displayCreatedAt" style="width: 40px;"
+                    :title="$t('table_col_createdat_title')"><a href="#" @click.prevent="sortOutputByCreated"
+                        id="sort-by-created"> {{ $t('table_col_createdat_label') }} </a></th>
+                <th class="text-start fs-6 " :title="$t('table_col_file_title')">
+                    <a href="#" @click.prevent="sortOutputByFile"
+                        id="sort-by-file">&emsp;{{ $t('table_col_file_label') }} </a>
+                </th>
+
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr v-for="line in output" :key="line.file">
+                <td class="text-end fs-6 " :title="$t('table_item_dir_title')"><a class="no-underline " href="#"
+                        @click.prevent="gotoFolder(line.file)"><img src="/src/assets/folder.svg" class="icon"
+                            alt="Icon"></a></td>
+                <td class="text-end fs-6 " :title="$t('table_item_hits_title')">{{ line.hit_count }}</td>
+                <td class="text-center fs-6 " v-show="displayModifiedAt" style="width: 40px;"
+                    :title="$t('table_item_modifiedat_title')">{{ line.modified_at}}</td>
+                <td class="text-center fs-6 " v-show="displayCreatedAt" style="width: 40px;"
+                    :title="$t('table_item_createdat_title')">{{ line.created_at}}</td>
+                <td class="text-start fs-6 "><a class="no-underline " href="#" @click.prevent="openFile(line.file)"
+                        :title="line.content"> {{ line.file }} </a></td>
+
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div class="container-fluid fixed-bottom py-1"
+    style="min-width: 1000px; max-width: 100%; background-color: #333; z-index: 1050; border-top: 1px solid #444;height:28px;">
+    <div class="row align-items-center justify-content-between px-3 g-0 h-100 ">
+        <div class="col-auto d-flex align-items-center h-100">
+            <div class="lang-switch d-flex align-items-center small">
+                <!-- 💡 使用 @click.prevent 阻止超連結的預設跳轉行為 -->
+                <a href="#" class="text-decoration-none mx-2 fs-6"
+                    :class="curLang==='zh' ? 'text-success fw-bold' : 'text-secondary'"
+                    @click.prevent="changeLang('zh')">
+                    中文
+                </a>
+
+                <span class="text-muted opacity-50">|</span>
+
+                <a href="#" class="text-decoration-none mx-2 fs-6"
+                    :class="curLang === 'en' ? 'text-success fw-bold' : 'text-secondary'"
+                    @click.prevent="changeLang('en')">
+                    English
+                </a>
+            </div>
+        </div>
+        <div class="col-auto text-white fs-6 h-100 align-items-center d-flex">
+            <div class="col-auto">
+                <span :title="$t('developed_by_title')"> <a href="https://github.com/vvvvvx/ripgrep-all-gui"
+                        target="_blank">Developed by Viaco.</a>&emsp; Email : 106324221@qq.com&emsp;</span><span
+                    :class="[(curVersion < latestVersion && latestVersion!='') ?  'blink':'']" v-html="versionText"
+                    :title="versionTitle"></span>
+            </div>
+        </div>
+    </div>
+
+</div>
+<!-- 
+    <div class="container-fluid min-vh-100 d-flex flex-column ">
+        <div class="row justify-content-end">
+            <div class="col-auto">
+            <span :title="$t('developed_by_title')"> <a href="https://github.com/vvvvvx/ripgrep-all-gui" target="_blank">Developed by Viaco.</a>&emsp; Email : 106324221@qq.com&emsp;</span><span :class="[(curVersion < latestVersion && latestVersion!='') ?  'blink':'']" v-html="versionText" :title="versionTitle"></span>
+            </div>
+        </div>
+    </div>
+-->
+<div id="alertBox" class="custom-alert">
+    <span style=" font-weight: bold;"
+        class="fs-5 text-warning ">{{ searchAll ? $t('msg_text_full_search_very_slow') : $t('msg_text_filetype_empty') }}
+    </span><br><br>
+    {{ searchAll ? $t('msg_text_all_type_slow') : $t('msg_text_common_type_slow') }}<br><br>
+    <span class="red-text">{{ $t('msg_text_input_filetype_to_speedup') }}</span><br><br><br>
+
+    <button @click="closeCustomAlert" id="closeAlertBtn" class="btn btn-primary">{{ $t('button_text_ok') }}</button>
+
+</div>
+<div id="alertRuningBox" class="custom-alert">
+    <span style="font-weight: bold;"
+        class="fs-5 text-warning ">{{ isDone ? $t('msg_text_search_done') : $t('msg_text_search_not_finished') }}</span><br>
+    <span style="font-weight: bold;"
+        class="fs-5 text-warning">{{ isDone ? '' : $t('msg_text_be_patient') }}</span><br><br>
+    {{ isDone ? $t('msg_text_click_cancel') : $t('msg_text_if_force_stop') }}
+    <br><br>
+    <div class="d-flex justify-content-between">
+        <button @click="forceKillSearch" id="forceKillBtn" class="btn btn-primary">{{ $t('button_text_stop') }}</button>
+        <button @click="closeRuningAlert" id="closeRuningAlertBtn"
+            class="btn btn-primary">{{ $t('button_text_cancel') }}</button>
+    </div>
+
+</div>
+<div id="alertNewVersionBox" class="custom-alert">
+    <span style="font-weight: bold;" class="fs-5">{{ $t('msg_text_new_version_found') }}</span><br><br>
+    <span> {{ $t('msg_text_current_version') }}{{ curVersion }} &emsp;
+        {{ $t('msg_text_latest_version') }}{{ latestVersion }}</span><br>
+    {{ $t('msg_text_please_go') }} <a href="https://github.com/vvvvvx/ripgrep-all-gui/releases"
+        target="_blank">https://github.com/vvvvvx/ripgrep-all-gui/releases</a> {{ $t('msg_text_download') }}<br>
+
+    <br><br>
+    <button @click="closeNewVersionAlert" id="closeNewVersionAlertBtn"
+        class="btn btn-primary">{{ $t('button_text_ok') }}</button>
+
+</div>

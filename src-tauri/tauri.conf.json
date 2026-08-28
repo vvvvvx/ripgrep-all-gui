@@ -1,5 +1,4 @@
 {
-  "$schema": "https://tauri.app",
   "productName": "ripgrep-all-gui",
   "identifier": "ripgrep-all-gui",
   "version": "1.6.1",
@@ -26,6 +25,9 @@
     "security": {
       "csp": null
     }
+  },
+  "plugins": {
+    "opener": {}
   },
   "bundle": {
     "active": true,

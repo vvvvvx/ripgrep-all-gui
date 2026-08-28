@@ -27,7 +27,7 @@
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue"
-  ],
+, "src/components/Search_instant.js"  ],
   "references": [
     {
       "path": "./tsconfig.node.json"

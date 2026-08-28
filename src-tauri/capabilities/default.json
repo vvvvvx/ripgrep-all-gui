@@ -1,5 +1,5 @@
 {
-    "$schema": "../gen/schemas/capability.json",
+    "$schema": "../gen/schemas/capabilities.json",
     "identifier": "default-capability",
     "description": "Capability for the main window",
     "windows": [
@@ -13,6 +13,17 @@
         "dialog:default",
         "shell:allow-open",
         "shell:default",
-        "opener:allow-reveal-item-in-dir"
+        "opener:allow-reveal-item-in-dir",
+        {
+            "identifier": "opener:allow-open-url",
+            "allow": [
+                {
+                    "url": "https://github.com/**"
+                },
+                {
+                    "url": "https://gitee.com/**"
+                }
+            ]
+        }
     ]
 }
