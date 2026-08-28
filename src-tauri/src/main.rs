@@ -4,7 +4,7 @@
 //use dirs::home_dir;
 use open::that;
 use regex::Regex;
-use ripgrepa_gui::myutils::*;
+use ripgrep_all_gui::myutils::*;
 use serde::{Deserialize, Serialize};
 
 use std::env::consts::OS;
@@ -28,6 +28,7 @@ use std::path::Path;
 use std::process:: Stdio;
 use std::process::{Command, ExitStatus};
 use std::collections::HashSet;
+use tauri::Emitter;
 // use tauri::Manager;
 
 //use std::sync::{Arc, Mutex};
@@ -76,7 +77,7 @@ fn get_home_dir() -> String {
         home_dir.to_str().unwrap().to_string()+"  |  "+&drives
     }
 }
-
+/*
 #[tauri::command]
 fn goto_folder(folder_path: &str) {
     println!("folder_path:{}", folder_path);
@@ -98,7 +99,7 @@ fn goto_folder(folder_path: &str) {
         Err(err) => eprintln!("Failed to open directory: {}", err),
     }
 }
-
+*/
 fn merge_paths(paths_old:&str,path_new:&str)->String{
     let path_vec:Vec<&str> = paths_old
         .split('|')
@@ -1116,14 +1117,17 @@ fn kill_rga_process_fn() {
     }
 }
 
- use tauri::Manager ;
+use tauri::Manager ;
+use tauri::Listener; 
 
 fn main() {
 
     let app=tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         //窗口居中显示
         .setup(|app| {
-            let window= app.get_window("main").unwrap();
+            let window= app.get_webview_window("main").unwrap();
             
             window.center().unwrap();
             #[cfg(windows)]
@@ -1131,7 +1135,7 @@ fn main() {
             window.show().unwrap();
             //注册应用退出事件
             //let app_handle = app.handle().clone();
-            app.listen_global("tauri://exit", move |_| {
+            app.listen_any("tauri://exit", move |_| {
                 kill_rga_process_fn();
             });
             Ok(())
@@ -1140,7 +1144,7 @@ fn main() {
             run_rg_command,
             open_file,
             open_folder_dialog,
-            goto_folder,
+            //goto_folder,
             get_home_dir,
             check_update,
             kill_rga_process, 

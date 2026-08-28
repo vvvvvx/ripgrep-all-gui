@@ -1,5 +1,5 @@
 {
-  "name": "ripgrepa-gui",
+  "name": "ripgrep-all-gui",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -10,13 +10,14 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tauri-apps/api": "^1.6.0",
+    "@tauri-apps/plugin-opener": "^2.5.4",
     "vue": "^3.5.41",
     "vue-i18n": "^11.4.10",
     "vuetify": "^4.1.11"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.6.3",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/cli": "^2.11.4",
     "@vitejs/plugin-vue": "^6.0.8",
     "typescript": "^5.4.5",
     "vite": "^8.2.2",

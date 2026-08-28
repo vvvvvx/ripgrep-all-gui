@@ -1,0 +1,18 @@
+{
+    "$schema": "../gen/schemas/capability.json",
+    "identifier": "default-capability",
+    "description": "Capability for the main window",
+    "windows": [
+        "main"
+    ],
+    "permissions": [
+        "core:default",
+        "core:event:allow-listen",
+        "core:event:allow-emit",
+        "dialog:allow-open",
+        "dialog:default",
+        "shell:allow-open",
+        "shell:default",
+        "opener:allow-reveal-item-in-dir"
+    ]
+}

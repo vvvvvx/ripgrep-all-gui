@@ -210,7 +210,7 @@
       {{ isDone ? $t('msg_text_click_cancel') : $t('msg_text_if_force_stop') }}
       <br><br>
       <div class="d-flex justify-content-between">
-      <button @click="forceKillSearch" id="forceKillBtn" class="btn btn-primary">{{ $t('button_text_force_stop') }}</button>
+      <button @click="forceKillSearch" id="forceKillBtn" class="btn btn-primary">{{ $t('button_text_stop') }}</button>
       <button @click="closeRuningAlert" id="closeRuningAlertBtn" class="btn btn-primary">{{ $t('button_text_cancel') }}</button>
       </div>
     
@@ -228,9 +228,10 @@
 </template>
 
 <script >
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
 import { nextTick, onBeforeUnmount, onMounted,onUnmounted, ref,computed } from 'vue';
 import { listen } from '@tauri-apps/api/event';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { el, tr } from 'vuetify/locale';
 import { getVersion } from '@tauri-apps/api/app';
 import { homeDir } from '@tauri-apps/api/path';
@@ -281,10 +282,15 @@ export default {
             console.log(filePath);
             invoke('open_file', { filePath: filePath });
         },
-        gotoFolder(folderPath) {
-            console.log(folderPath);
-            invoke('goto_folder', { folderPath: folderPath });
-        },
+        // gotoFolder2(folderPath) {
+        //     console.log(folderPath);
+
+        //     invoke('goto_folder', { folderPath: folderPath });
+        // },
+        async gotoFolder(path) {
+            //alert(path);
+            await revealItemInDir(path)
+        }
         
     },
     setup() {
